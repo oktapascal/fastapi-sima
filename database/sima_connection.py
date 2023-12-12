@@ -6,7 +6,7 @@ import pyodbc
 
   :return: A connection object to the SIMA database.
 """
-def sima_connection():
+def sima_connection() -> pyodbc.Connection:
   host = os.getenv('DB_HOST1')
   port = os.getenv('DB_PORT1')
   database = os.getenv('DB_NAME1')
