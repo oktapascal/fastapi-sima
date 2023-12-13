@@ -41,9 +41,9 @@ def test_db():
     print("{c} is not working".format(c=dbsima))
 
 @app.get('/api/export/excel/perangkat')
-def exportExcelPerangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None):
+async def exportExcelPerangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None):
   try:
-    result = perangkat_services.get_data_perangkat(kode_jenis, kode_lokasi, tahun, kode_area, kode_fm, kode_bm, kode_ktg, kode_subktg)
+    result = await perangkat_services.get_data_perangkat(kode_jenis, kode_lokasi, tahun, kode_area, kode_fm, kode_bm, kode_ktg, kode_subktg)
     
     headerResponse = {
       'Content-Disposition': 'attachment; filename="'+result+'"'
