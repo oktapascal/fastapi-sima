@@ -106,6 +106,8 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     }
     
     background_task.add_task(os.remove, file_name)
+    cursor.close()
+    dbsima.close()
     
     return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
