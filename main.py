@@ -38,8 +38,9 @@ def exportExcelPerangkat(background_task: BackgroundTasks, kode_jenis: str | Non
     headerResponse = {
       'Content-Disposition': 'attachment; filename="'+result+'"'
     }
+    
+    background_task.add_task(os.remove, result)
+    
     return FileResponse(path=result, headers=headerResponse, filename=result)
   except Exception:
     return Exception
-  finally:
-    background_task.add_task(os.remove, result)
