@@ -1,4 +1,5 @@
 import os
+import pyodbc
 from dotenv import load_dotenv
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import FileResponse
@@ -29,6 +30,15 @@ A dictionary with the keys 'status' and 'message'.
 @app.get('/')
 def root():
   return {'status': 'OK', 'message': 'Hello From Fastapi-SIMA'}
+
+@app.get('/test-db')
+def test_db():
+  try:
+    print("{c} is working".format(c=dbsima))
+    dbsima.close()
+    return {'status': 'OK', 'message': 'Success Connect Database'}
+  except pyodbc.Error as ex:
+    print("{c} is not working".format(c=dbsima))
 
 @app.get('/api/export/excel/perangkat')
 def exportExcelPerangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None):
