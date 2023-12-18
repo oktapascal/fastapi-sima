@@ -11,7 +11,6 @@ from database.sima_connection import sima_connection
 load_dotenv()
 
 app = FastAPI()
-dbsima = sima_connection()
 
 """
 A function that serves as the root endpoint for the FastAPI application.
@@ -31,6 +30,7 @@ def root():
 @app.get('/test-db')
 def test_db():
   try:
+    dbsima = sima_connection()
     print("{c} is working".format(c=dbsima))
     dbsima.close()
     return {'status': 'OK', 'message': 'Success Connect Database'}
@@ -39,6 +39,8 @@ def test_db():
 
 @app.get('/api/export/excel/perangkat')
 def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None):
+  dbsima = sima_connection()
+  
   columns = ["no", "id_group", "id_area", "id_unit", "nama_unit", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_kelas", "id_room", "id_lantai",
   "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori", "nama_subkategori", "nama_perangkat", "is_ceklis", "merk", "satuan", "jumlah",
   "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "milik", "keterangan", "id_perangkat"];
