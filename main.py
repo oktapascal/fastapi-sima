@@ -73,7 +73,7 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
   try:
     cursor = dbsima.cursor()
     cursor.execute(f"""
-        select a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
+        select top 10 a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
         a.kode_gedung, e.nama_gedung, a.kelas_id, a.room_id, a.floor_id, g.nama_lantai, a.jid, h.nama_jenis,
         a.kid, i.nama_kategori, a.skid, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.merk, a.satuan, a.jumlah,
         a.kapasitas, a.no_seri, a.type, a.tahun, a.kondisi, a.milik, a.keterangan, a.id_perangkat
@@ -108,9 +108,10 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     }
     
     background_task.add_task(os.remove, file_name)
-    cursor.close()
-    dbsima.close()
     
     return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
     return {"status": False, "message": str(ex)}
+  finally:
+    cursor.close()
+    dbsima.close()
