@@ -46,34 +46,52 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
   "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "milik", "keterangan", "id_perangkat"];
     
   where = "where e.flag_aktif <> '3'"
-  if kode_jenis is not None or kode_jenis != "":
+  if kode_jenis is not None and kode_jenis != "" and kode_jenis != "null":
     where = where + f"and a.jid in ({kode_jenis})"
     
-  if kode_lokasi is not None or kode_lokasi != "":
+  if kode_lokasi is not None and kode_lokasi != "" and kode_lokasi != "null":
     where = where + f"and a.location_id in ({kode_lokasi})"
     
-  if tahun is not None or tahun != "":
+  if tahun is not None and tahun != "" and tahun != "null":
     where = where + f"and a.tahun in ({tahun})"
     
-  if kode_area is not None or kode_area != "":
+  if kode_area is not None and kode_area != "" and kode_area != "null":
     where = where + f"and e.kode_area in ({kode_area})"
   
-  if kode_fm is not None or kode_fm != "":
+  if kode_fm is not None and kode_fm != "" and kode_fm != "null":
     where = where + f"and e.kode_fm in ({kode_fm})"
     
-  if kode_bm is not None or kode_bm != "":
+  if kode_bm is not None and kode_bm != "" and kode_bm != "null":
     where = where + f"and e.kode_bm in ({kode_bm})"
     
-  if kode_ktg is not None or kode_ktg != "":
+  if kode_ktg is not None and kode_ktg != "" and kode_ktg != "null":
     where = where + f"and a.kid in ({kode_ktg})"
     
-  if kode_subktg is not None or kode_subktg != "":
+  if kode_subktg is not None and kode_subktg != "" and kode_subktg != "null":
     where = where + f"and a.skid in ({kode_subktg})"
     
   try:
     cursor = dbsima.cursor()
     cursor.execute(f"""
-        select top 10 a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
+        select a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
+        a.kode_gedung, e.nama_gedung, a.kelas_id, a.room_id, a.floor_id, g.nama_lantai, a.jid, h.nama_jenis,
+        a.kid, i.nama_kategori, a.skid, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.merk, a.satuan, a.jumlah,
+        a.kapasitas, a.no_seri, a.type, a.tahun, a.kondisi, a.milik, a.keterangan, a.id_perangkat
+        from am_perangkat a
+        inner join am_gedung as e ON e.kode_gedung = a.kode_gedung and e.kode_lokasi='11'
+        inner join am_units as b ON a.unit_id = b.id
+        inner join am_locations as d ON a.location_id = d.id
+        inner join gsd_rooms as f ON a.room_id = f.id
+        inner join am_floors as g ON a.floor_id = g.id
+        left join am_perangkat_jenis as h ON a.jid = h.jenis_id
+        left join am_perangkat_kategori as i ON a.kid = i.kategori_id
+        left join am_perangkat_sub_kategori as j ON a.skid = j.sub_kategori_id
+        left join am_witel as k ON e.kode_witel = k.kode_witel
+        {where}
+      """)
+    
+    print(f"""
+        select a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
         a.kode_gedung, e.nama_gedung, a.kelas_id, a.room_id, a.floor_id, g.nama_lantai, a.jid, h.nama_jenis,
         a.kid, i.nama_kategori, a.skid, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.merk, a.satuan, a.jumlah,
         a.kapasitas, a.no_seri, a.type, a.tahun, a.kondisi, a.milik, a.keterangan, a.id_perangkat
