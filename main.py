@@ -90,24 +90,6 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
         {where}
       """)
     
-    print(f"""
-        select a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
-        a.kode_gedung, e.nama_gedung, a.kelas_id, a.room_id, a.floor_id, g.nama_lantai, a.jid, h.nama_jenis,
-        a.kid, i.nama_kategori, a.skid, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.merk, a.satuan, a.jumlah,
-        a.kapasitas, a.no_seri, a.type, a.tahun, a.kondisi, a.milik, a.keterangan, a.id_perangkat
-        from am_perangkat a
-        inner join am_gedung as e ON e.kode_gedung = a.kode_gedung and e.kode_lokasi='11'
-        inner join am_units as b ON a.unit_id = b.id
-        inner join am_locations as d ON a.location_id = d.id
-        inner join gsd_rooms as f ON a.room_id = f.id
-        inner join am_floors as g ON a.floor_id = g.id
-        left join am_perangkat_jenis as h ON a.jid = h.jenis_id
-        left join am_perangkat_kategori as i ON a.kid = i.kategori_id
-        left join am_perangkat_sub_kategori as j ON a.skid = j.sub_kategori_id
-        left join am_witel as k ON e.kode_witel = k.kode_witel
-        {where}
-      """)
-    
     dataframe = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns)
     
     today = datetime.today()
