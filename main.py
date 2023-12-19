@@ -46,28 +46,28 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
   "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "milik", "keterangan", "id_perangkat"];
     
   where = "where e.flag_aktif <> '3'"
-  if kode_jenis is not None:
+  if kode_jenis is not None or kode_jenis != "":
     where = where + f"and a.jid in (${kode_jenis})"
     
-  if kode_lokasi is not None:
+  if kode_lokasi is not None or kode_lokasi != "":
     where = where + f"and a.location_id in (${kode_lokasi})"
     
-  if tahun is not None:
+  if tahun is not None or tahun != "":
     where = where + f"and a.tahun in (${tahun})"
     
-  if kode_area is not None:
+  if kode_area is not None or kode_area != "":
     where = where + f"and e.kode_area in (${kode_area})"
   
-  if kode_fm is not None:
+  if kode_fm is not None or kode_fm != "":
     where = where + f"and e.kode_fm in (${kode_fm})"
     
-  if kode_bm is not None:
+  if kode_bm is not None or kode_bm != "":
     where = where + f"and e.kode_bm in (${kode_bm})"
     
-  if kode_ktg is not None:
+  if kode_ktg is not None or kode_ktg != "":
     where = where + f"and a.kid in (${kode_ktg})"
     
-  if kode_subktg is not None:
+  if kode_subktg is not None or kode_subktg != "":
     where = where + f"and a.skid in (${kode_subktg})"
     
   try:
