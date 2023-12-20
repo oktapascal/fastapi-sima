@@ -71,7 +71,7 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     where = where + f"and a.skid in ({kode_subktg})"
     
   if status_aktif is not None and status_aktif != "" and status_aktif != "null":
-    where = where + f"and isnull(a.status_aktif, '0') in ({status_aktif})"
+    where = where + f"and isnull(a.status_aktif, '1') in ({status_aktif})"
     
   try:
     cursor = dbsima.cursor()
