@@ -38,7 +38,7 @@ def test_db():
     print("{c} is not working".format(c=dbsima))
 
 @app.get('/api/export/excel/perangkat')
-def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None):
+def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None):
   dbsima = sima_connection()
   
   columns = ["no", "id_group", "id_area", "id_unit", "nama_unit", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_kelas", "id_room", "id_lantai",
@@ -69,6 +69,9 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     
   if kode_subktg is not None and kode_subktg != "" and kode_subktg != "null":
     where = where + f"and a.skid in ({kode_subktg})"
+    
+  if status_aktif is not None and status_aktif != "" and status_aktif != "null":
+    where = where + f"and isnull(a.status_aktif, '0') in ({status_aktif})"
     
   try:
     cursor = dbsima.cursor()
