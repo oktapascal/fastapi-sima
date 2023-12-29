@@ -1,16 +1,26 @@
 from datetime import datetime
+import time
 import os
 import pandas
 import pyodbc
 from dotenv import load_dotenv
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import Depends, FastAPI, BackgroundTasks, File, UploadFile, Request
 from fastapi.responses import FileResponse
+from contextlib import asynccontextmanager
 
-from database.sima_connection import sima_connection
+from database import database
 
 load_dotenv()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  database_connection = database.Database(os.getenv('DB_USER1'),os.getenv('DB_PASSWORD1'),os.getenv('DB_HOST1'),os.getenv('DB_NAME1'))
+  app.state.dbsima: pyodbc.Connection = database_connection.connect()
+  yield
+  app.state.dbsima.close()
+
+  
+app = FastAPI(lifespan=lifespan)
 
 """
 A function that serves as the root endpoint for the FastAPI application.
@@ -28,19 +38,15 @@ def root():
   return {'status': 'OK', 'message': 'Hello From Fastapi-SIMA'}
 
 @app.get('/test-db')
-def test_db():
+def test_db(db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
   try:
-    dbsima = sima_connection()
-    print("{c} is working".format(c=dbsima))
-    dbsima.close()
+    print("{c} is working".format(c=db))
     return {'status': 'OK', 'message': 'Success Connect Database'}
   except pyodbc.Error as ex:
-    print("{c} is not working".format(c=dbsima))
+    print("{c} is not working".format(c=db))
 
 @app.get('/api/export/excel/perangkat')
-def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None):
-  dbsima = sima_connection()
-  
+def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None,db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
   columns = ["no", "id_group", "id_area", "id_unit", "nama_unit", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_kelas", "id_room", "id_lantai",
   "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori", "nama_subkategori", "nama_perangkat", "is_ceklis", "merk", "satuan", "jumlah",
   "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "milik", "keterangan", "id_perangkat"];
@@ -74,7 +80,7 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     where = where + f"and isnull(a.status_aktif, '1') in ({status_aktif})"
     
   try:
-    cursor = dbsima.cursor()
+    cursor = db.cursor()
     cursor.execute(f"""
         select a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
         a.kode_gedung, e.nama_gedung, a.kelas_id, a.room_id, a.floor_id, g.nama_lantai, a.jid, h.nama_jenis,
@@ -117,4 +123,118 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     return {"status": False, "message": str(ex)}
   finally:
     cursor.close()
-    dbsima.close()
+    
+@app.post('/api/import/csv/sap3')
+def import_csv_sap3(background_task: BackgroundTasks, file: UploadFile = File(...),db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
+  t0 = time.perf_counter()
+  
+  try:
+    contents = file.file.read()
+    
+    with open(file.filename, 'wb') as f:
+      f.write(contents)
+    
+    dataframe = pandas.read_csv(file.filename, sep=';',na_values='0',index_col=False,keep_default_na=False,dtype=str)
+    dataframe.fillna(0, inplace=True)
+    
+    read_time = f"{time.perf_counter() - t0:.1f} seconds"
+    
+    cursor = db.cursor()
+    
+    cursor.execute("truncate table dev_real_sap3_tmp");
+    cursor.commit()
+    
+    count = 0
+    sql_statement = "BEGIN TRANSACTION \r\n"
+    
+    for index,df in dataframe.iterrows():
+      count += 1
+      
+      dataframe.loc[index,'amount_in_doc_curr'] = str(dataframe.loc[index,'amount_in_doc_curr']).replace('.','').replace(',','.')
+      dataframe.loc[index,'dalam_jutaan'] = str(dataframe.loc[index,'dalam_jutaan']).replace('.','').replace(',','.')
+      
+      sql_statement += f"""
+      insert into dev_real_sap3_tmp (kode_akun,kode_ba,kode_cc,posting_date,posting_period,no_dokumen,reference,assignment,amount_in_doc_curr,keterangan,trading_partner,
+      dalam_jutaan,tenant,grouping,c3,c4,c5,c6,cc_baru,ba_baru,periode,cap_non_cap,refference_pm,reff_1,reff_2,portfolio,leveraging,digital,segmen,segmen_for_pl,dc,id_crm,id_ampm)
+      values ('{df['kode_akun']}','{df['kode_ba']}','{df['kode_cc']}','{df['posting_date']}','{df['posting_period']}','{df['no_dokumen']}','{df['reference']}','{df['assignment']}',
+      '{dataframe.loc[index,'amount_in_doc_curr']}','{df['keterangan']}','{df['trading_partner']}','{dataframe.loc[index,'dalam_jutaan']}','{df['tenant']}','{df['grouping']}','{df['c3']}',
+      '{df['c4']}','{df['c5']}','{df['c6']}','{df['cc_baru']}','{df['ba_baru']}','{df['periode']}','{df['cap_non_cap']}','{df['refference_pm']}','{df['reff_1']}','{df['reff_2']}',
+      '{df['portfolio']}','{df['leveraging']}','{df['digital']}','{df['segmen']}','{df['segmen_for_pl']}','{df['dc']}','{df['id_crm']}','{df['id_ampm']}')
+      """
+      
+      if count % 100 == 0:
+        sql_statement += "COMMIT TRANSACTION"
+        cursor.execute(sql_statement)
+        cursor.commit()
+        sql_statement = "BEGIN TRANSACTION \r\n"
+    
+    if sql_statement != "BEGIN TRANSACTION \r\n":
+      sql_statement += "COMMIT TRANSACTION"
+      cursor.execute(sql_statement)
+      cursor.commit()
+    
+    background_task.add_task(os.remove, file.filename)
+    
+    return {"status": True, "message": "Import CSV berhasil", "read_time": read_time,"process_time": f"{time.perf_counter() - t0:.1f} seconds"}
+  except Exception as ex:
+    return {"status": False, "message": str(ex)}
+  finally:
+    file.file.close()
+    cursor.close()
+    
+@app.post('/api/import/excel/sap3')
+def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(...),db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
+  t0 = time.perf_counter()
+  
+  try:
+    contents = file.file.read()
+    
+    with open(file.filename, 'wb') as f:
+      f.write(contents)
+      
+    dataframe = pandas.read_excel(file.filename,na_values='0',index_col=False,keep_default_na=False,dtype=str)
+    dataframe.fillna(0, inplace=True)
+    
+    read_time = f"{time.perf_counter() - t0:.1f} seconds"
+    
+    cursor = db.cursor()
+    
+    cursor.execute("truncate table dev_real_sap3_tmp");
+    cursor.commit()
+    
+    count = 0
+    sql_statement = "BEGIN TRANSACTION \r\n"
+    
+    for index,df in dataframe.iterrows():
+      count += 1
+      
+      dataframe.loc[index,'amount_in_doc_curr'] = str(dataframe.loc[index,'amount_in_doc_curr']).replace('.','').replace(',','.')
+      dataframe.loc[index,'dalam_jutaan'] = str(dataframe.loc[index,'dalam_jutaan']).replace('.','').replace(',','.')
+      
+      sql_statement += f"""
+      insert into dev_real_sap3_tmp (kode_akun,kode_ba,kode_cc,posting_date,posting_period,no_dokumen,reference,assignment,amount_in_doc_curr,keterangan,trading_partner,
+      dalam_jutaan,tenant,grouping,c3,c4,c5,c6,cc_baru,ba_baru,periode,cap_non_cap,refference_pm,reff_1,reff_2,portfolio,leveraging,digital,segmen,segmen_for_pl,dc,id_crm,id_ampm)
+      values ('{df['kode_akun']}','{df['kode_ba']}','{df['kode_cc']}','{df['posting_date']}','{df['posting_period']}','{df['no_dokumen']}','{df['reference']}','{df['assignment']}',
+      '{dataframe.loc[index,'amount_in_doc_curr']}','{df['keterangan']}','{df['trading_partner']}','{dataframe.loc[index,'dalam_jutaan']}','{df['tenant']}','{df['grouping']}','{df['c3']}',
+      '{df['c4']}','{df['c5']}','{df['c6']}','{df['cc_baru']}','{df['ba_baru']}','{df['periode']}','{df['cap_non_cap']}','{df['refference_pm']}','{df['reff_1']}','{df['reff_2']}',
+      '{df['portfolio']}','{df['leveraging']}','{df['digital']}','{df['segmen']}','{df['segmen_for_pl']}','{df['dc']}','{df['id_crm']}','{df['id_ampm']}')
+      """
+      
+      if count % 100 == 0:
+        sql_statement += "COMMIT TRANSACTION"
+        cursor.execute(sql_statement)
+        cursor.commit()
+        sql_statement = "BEGIN TRANSACTION \r\n"
+    
+    if sql_statement != "BEGIN TRANSACTION \r\n":
+      sql_statement += "COMMIT TRANSACTION"
+      cursor.execute(sql_statement)
+      cursor.commit()
+    
+    background_task.add_task(os.remove, file.filename)
+    
+    return {"status": True, "message": "Import Excel berhasil", "read_time": read_time, "process_time": f"{time.perf_counter() - t0:.1f} seconds"}
+  except Exception as ex:
+    return {"status": False, "message": str(ex)}
+  finally:
+    cursor.close()
