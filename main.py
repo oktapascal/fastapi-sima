@@ -47,16 +47,16 @@ def test_db(db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
 
 @app.get('/api/export/excel/perangkat')
 def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None,db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
-  columns = ["no", "id_group", "id_area", "id_unit", "nama_unit", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_kelas", "id_room", "id_lantai",
-  "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori", "nama_subkategori", "nama_perangkat", "is_ceklis", "merk", "satuan", "jumlah",
-  "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "milik", "keterangan", "id_perangkat", "status_aktif", "tanggal_periksa", "nik_input", "updated_at"];
+  columns = ["no", "id_regional", "id_area", "nama_area", "id_bm", "nama_bm", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_room", "id_lantai",
+  "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori", "nama_subkategori", "nama_perangkat", "is_ceklis", "kode_merk", "nama_merk", "satuan", "jumlah",
+  "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "kode_milik", "nama_milik", "keterangan", "id_perangkat", "status_aktif", "tanggal_periksa", "nik_input", "updated_at"];
     
   where = "where e.flag_aktif <> '3'"
   if kode_jenis is not None and kode_jenis != "" and kode_jenis != "null":
-    where = where + f"and a.jid in ({kode_jenis})"
+    where = where + f"and a.kode_jenis in ({kode_jenis})"
     
   if kode_lokasi is not None and kode_lokasi != "" and kode_lokasi != "null":
-    where = where + f"and a.location_id in ({kode_lokasi})"
+    where = where + f"and a.kode_lokasi in ({kode_lokasi})"
     
   if tahun is not None and tahun != "" and tahun != "null":
     where = where + f"and a.tahun in ({tahun})"
@@ -65,16 +65,16 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     where = where + f"and e.kode_area in ({kode_area})"
   
   if kode_fm is not None and kode_fm != "" and kode_fm != "null":
-    where = where + f"and e.kode_fm in ({kode_fm})"
+    where = where + f"and a.kode_fm in ({kode_fm})"
     
   if kode_bm is not None and kode_bm != "" and kode_bm != "null":
-    where = where + f"and e.kode_bm in ({kode_bm})"
+    where = where + f"and a.kode_bm in ({kode_bm})"
     
   if kode_ktg is not None and kode_ktg != "" and kode_ktg != "null":
-    where = where + f"and a.kid in ({kode_ktg})"
+    where = where + f"and a.kode_kategori in ({kode_ktg})"
     
   if kode_subktg is not None and kode_subktg != "" and kode_subktg != "null":
-    where = where + f"and a.skid in ({kode_subktg})"
+    where = where + f"and a.kode_subkategori in ({kode_subktg})"
     
   if status_aktif is not None and status_aktif != "" and status_aktif != "null":
     where = where + f"and isnull(a.status_aktif, '1') in ({status_aktif})"
@@ -82,21 +82,24 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
   try:
     cursor = db.cursor()
     cursor.execute(f"""
-        select a.id no_perangkat, a.group_id, e.kode_area, a.unit_id, b.nama_unit, a.witel_id, k.nama, a.location_id, d.nama_lokasi,
-        a.kode_gedung, e.nama_gedung, a.kelas_id, a.room_id, a.floor_id, g.nama_lantai, a.jid, h.nama_jenis,
-        a.kid, i.nama_kategori, a.skid, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.merk, a.satuan, a.jumlah,
-        a.kapasitas, a.no_seri, a.type, a.tahun, a.kondisi, a.milik, a.keterangan, a.id_perangkat, 
+        select a.id no_perangkat, e.kode_area, a.kode_fm, l.nama nama_fm, a.kode_bm, m.nama nama_bm, a.kode_witel, k.nama nama_witel, a.kode_lokasi, d.nama_lokasi,
+        a.kode_gedung, e.nama_gedung, a.kode_room, a.kode_lantai, g.nama_lantai, a.kode_jenis, h.nama_jenis,
+        a.kode_kategori, i.nama_kategori, a.kode_subkategori, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.kode_merk, n.nama_merk, a.satuan, a.jumlah,
+        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, o.nama nama_milik, a.keterangan, a.id_perangkat, 
         case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, a.kondisi_terakhir, a.nik_user, a.tgl_input
-        from am_perangkat a
+        from dev_am_perangkat a
         inner join am_gedung as e ON e.kode_gedung = a.kode_gedung and e.kode_lokasi='11'
-        inner join am_units as b ON a.unit_id = b.id
-        inner join am_locations as d ON a.location_id = d.id
-        inner join gsd_rooms as f ON a.room_id = f.id
-        inner join am_floors as g ON a.floor_id = g.id
-        left join am_perangkat_jenis as h ON a.jid = h.jenis_id
-        left join am_perangkat_kategori as i ON a.kid = i.kategori_id
-        left join am_perangkat_sub_kategori as j ON a.skid = j.sub_kategori_id
+        inner join am_locations as d ON a.kode_lokasi = d.id
+        inner join gsd_rooms as f ON a.kode_room = f.id
+        inner join am_floors as g ON a.kode_lantai = g.id
+        left join am_perangkat_jenis as h ON a.kode_jenis = h.jenis_id
+        left join am_perangkat_kategori as i ON a.kode_kategori = i.kategori_id
+        left join am_perangkat_sub_kategori as j ON a.kode_subkategori = j.sub_kategori_id
         left join am_witel as k ON e.kode_witel = k.kode_witel
+        left join am_fm l on a.kode_fm=l.kode_fm
+        left join am_bm m on a.kode_bm=m.kode_bm
+        left join am_perangkat_merk n on a.kode_merk=n.kode_merk
+        left join am_milik o on a.kode_milik=o.kode_milik
         {where}
       """)
     
