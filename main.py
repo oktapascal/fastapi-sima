@@ -44,6 +44,8 @@ def test_db(db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
     return {'status': 'OK', 'message': 'Success Connect Database'}
   except pyodbc.Error as ex:
     print("{c} is not working".format(c=db))
+  finally:
+    db.close()
 
 @app.get('/api/export/excel/perangkat')
 def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None,db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
@@ -127,6 +129,7 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     return {"status": False, "message": str(ex)}
   finally:
     cursor.close()
+    db.close()
     
 @app.post('/api/import/csv/sap3')
 def import_csv_sap3(background_task: BackgroundTasks, file: UploadFile = File(...),db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
@@ -185,6 +188,7 @@ def import_csv_sap3(background_task: BackgroundTasks, file: UploadFile = File(..
   finally:
     file.file.close()
     cursor.close()
+    db.close()
     
 @app.post('/api/import/excel/sap3')
 def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(...),db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
@@ -242,3 +246,38 @@ def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(
     return {"status": False, "message": str(ex)}
   finally:
     cursor.close()
+    db.close()
+    
+# @app.get('/api/template/perangkat-update')
+def export_template_update_perangkat(background_task: BackgroundTasks, kode_regional: str | None = None, kode_area: str | None = None, kode_bm: str | None = None, kode_witel: str | None = None, kode_gedung: str | None = None, db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
+  columns = ["id", "kode_area", "kode_bm", "kode_witel", "kode_lokasi", "kode_gedung", "kode_lantai", "kode_room", "kode_milik", "kode_jenis", "kode_kategori", "kode_subkategori", "jumlah", 
+            "satuan", "kapasitas", "satuan_kapasitas", "model", "no_seri", "tahun", "kondisi", "waktu_pengadaan", "cek_birawa", "tanggal_cek", "keterangan", "status_aktif", "updated_by", "updated_at"]
+  
+  where = "where e.flag_aktif <> '3'"
+  
+  if kode_regional is not None and kode_regional != "" and kode_regional != "null":
+    where = where + f"and c.kode_area = '{kode_regional}'"
+  
+  if kode_area is not None and kode_area != "" and kode_area != "null":
+    where = where + f"and a.kode_fm = '{kode_area}'"
+    
+  if kode_bm is not None and kode_bm != "" and kode_bm != "null":
+    where = where + f"and a.kode_bm = '{kode_bm}'"
+    
+  if kode_witel is not None and kode_witel != "" and kode_witel != "null":
+    where = where + f"and a.kode_witel = '{kode_witel}'"
+    
+  if kode_gedung is not None and kode_gedung != "" and kode_gedung != "null":
+    where = where + f"and a.kode_gedung = '{kode_gedung}'"
+    
+  sql_statement = f"""
+  
+  """
+  
+  try:
+    cursor = db.cursor()
+  except Exception as ex:
+    return {"status": False, "message": str(ex)}
+  finally:
+    cursor.close()
+    db.close()
