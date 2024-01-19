@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, BackgroundTasks, File, UploadFile, Request
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+from openpyxl.styles import NamedStyle, PatternFill, Alignment
 
 from database import database
 
@@ -123,6 +124,8 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     }
     
     background_task.add_task(os.remove, file_name)
+    
+    del dataframe
     
     return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
@@ -248,34 +251,300 @@ def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(
     cursor.close()
     db.close()
     
-# @app.get('/api/template/perangkat-update')
+@app.get('/api/template/perangkat-update')
 def export_template_update_perangkat(background_task: BackgroundTasks, kode_regional: str | None = None, kode_area: str | None = None, kode_bm: str | None = None, kode_witel: str | None = None, kode_gedung: str | None = None, db: pyodbc.Connection = Depends(lambda: app.state.dbsima)):
-  columns = ["id", "kode_area", "kode_bm", "kode_witel", "kode_lokasi", "kode_gedung", "kode_lantai", "kode_room", "kode_milik", "kode_jenis", "kode_kategori", "kode_subkategori", "jumlah", 
-            "satuan", "kapasitas", "satuan_kapasitas", "model", "no_seri", "tahun", "kondisi", "waktu_pengadaan", "cek_birawa", "tanggal_cek", "keterangan", "status_aktif", "updated_by", "updated_at"]
+  columns_perangkat = ["id", "kode_area", "kode_bm", "kode_witel", "kode_lokasi", "kode_gedung", "kode_lantai", "kode_room", "kode_milik", "kode_jenis", "kode_kategori", "kode_subkategori", "kode_merk", 
+                      "jumlah", "satuan", "kapasitas", "satuan_kapasitas", "model", "no_seri", "tahun", "kondisi", "waktu_pengadaan", "cek_birawa", "tanggal_cek", "keterangan", 
+                      "status_aktif", "updated_by", "updated_at"]
   
-  where = "where e.flag_aktif <> '3'"
+  where_perangkat = "where b.flag_aktif <> '3'"
+  where_regional = "where a.kode_lokasi = '11'"
+  where_area = "where a.kode_lokasi = '11'"
+  where_bm = "where a.kode_lokasi = '11'"
+  where_witel = "where a.kode_lokasi = '11'"
+  where_location = "where a.flag_aktif = '1'"
+  where_gedung = "where a.kode_lokasi = '11' and a.flag_aktif <> '3'"
+  where_lantai = "where a.flag_aktif = '1'"
+  where_ruang = "where a.flag_aktif = '1'"
   
   if kode_regional is not None and kode_regional != "" and kode_regional != "null":
-    where = where + f"and c.kode_area = '{kode_regional}'"
+    where_perangkat = where_perangkat + f"and b.kode_area = '{kode_regional}'"
+    where_regional = where_regional + f"and a.kode_area = '{kode_regional}'"
+    where_area = where_area + f"and a.kode_area = '{kode_regional}'"
+    where_bm = where_bm + f"and a.kode_area = '{kode_regional}'"
+    where_witel = where_witel + f"and b.kode_area = '{kode_regional}'"
+    where_gedung = where_gedung + f"and a.kode_area = '{kode_regional}'"
+    where_lantai = where_lantai + f"and b.kode_area = '{kode_regional}'"
+    where_ruang = where_ruang + f"and b.kode_area = '{kode_regional}'"
   
   if kode_area is not None and kode_area != "" and kode_area != "null":
-    where = where + f"and a.kode_fm = '{kode_area}'"
+    where_perangkat = where_perangkat + f"and a.kode_fm = '{kode_area}'"
+    where_bm = where_bm + f"and a.kode_fm = '{kode_area}'"
+    where_witel = where_witel + f"and b.kode_fm = '{kode_area}'"
+    where_gedung = where_gedung + f"and a.kode_fm = '{kode_area}'"
+    where_lantai = where_lantai + f"and b.kode_fm = '{kode_area}'"
+    where_ruang = where_ruang + f"and b.kode_fm = '{kode_area}'"
     
   if kode_bm is not None and kode_bm != "" and kode_bm != "null":
-    where = where + f"and a.kode_bm = '{kode_bm}'"
+    where_perangkat = where_perangkat + f"and a.kode_bm = '{kode_bm}'"
+    where_witel = where_witel + f"and b.kode_bm = '{kode_bm}'"
+    where_location = where_location + f"and a.kode_bm = '{kode_bm}'"
+    where_gedung = where_gedung + f"and a.kode_bm = '{kode_bm}'"
+    where_lantai = where_lantai + f"and b.kode_bm = '{kode_bm}'"
+    where_ruang = where_ruang + f"and b.kode_bm = '{kode_bm}'"
     
   if kode_witel is not None and kode_witel != "" and kode_witel != "null":
-    where = where + f"and a.kode_witel = '{kode_witel}'"
+    where_perangkat = where_perangkat + f"and a.kode_witel = '{kode_witel}'"
+    where_witel = where_witel + f"and b.kode_witel = '{kode_witel}'"
+    where_gedung = where_gedung + f"and a.kode_witel = '{kode_witel}'"
+    where_lantai = where_lantai + f"and b.kode_witel = '{kode_witel}'"
+    where_ruang = where_ruang + f"and b.kode_witel = '{kode_witel}'"
     
   if kode_gedung is not None and kode_gedung != "" and kode_gedung != "null":
-    where = where + f"and a.kode_gedung = '{kode_gedung}'"
+    where_perangkat = where_perangkat + f"and a.kode_gedung = '{kode_gedung}'"
+    where_gedung = where_gedung + f"and a.kode_gedung = '{kode_gedung}'"
+    where_lantai = where_lantai + f"and a.kode_gedung_sima = '{kode_gedung}'"
+    where_ruang = where_ruang + f"and a.kode_gedung = '{kode_gedung}'"
     
-  sql_statement = f"""
-  
+  sql_statement_perangkat = f"""
+  select top 20 a.id, a.kode_fm, a.kode_bm, a.kode_witel, a.kode_lokasi, a.kode_gedung, a.kode_lantai, a.kode_room, a.kode_milik, a.kode_jenis, a.kode_kategori, a.kode_subkategori, a.kode_merk, a.jumlah,
+  a.satuan, a.kapasitas, a.satuan_kapasitas, a.model, a.no_seri, a.tahun, a.kondisi, a.tahun_pengadaan, a.is_ceklis, a.kondisi_terakhir, a.keterangan, isnull(a.status_aktif, 1) status_aktif, '' updated_by, '' updated_at
+  from dev_am_perangkat a
+  inner join am_gedung b on a.kode_gedung=b.kode_gedung and b.kode_lokasi='11'
+  {where_perangkat}
   """
   
+  columns_regional = ["kode_regional", "nama_regional"]
+  
+  sql_statement_regional = f"""
+  select a.kode_area, a.nama
+  from am_area a
+  {where_regional}
+  """
+  
+  columns_area = ["kode_area", "nama_area"]
+  
+  sql_statement_area = f"""
+  select a.kode_fm, a.nama
+  from am_fm a
+  {where_area}
+  """
+  
+  columns_bm = ["kode_bm", "nama"]
+  
+  sql_statement_bm = f"""
+  select a.kode_bm, a.nama
+  from am_bm a
+  {where_bm}
+  """
+  
+  columns_witel = ["kode_witel", "nama"]
+  
+  sql_statement_witel = f"""
+  select a.kode_witel, a.nama
+  from am_witel a
+  where a.kode_witel = 'WT04'
+  union all
+  select a.kode_witel, a.nama
+  from am_witel a
+  inner join dev_am_perangkat_witel b on a.kode_witel=b.kode_witel
+  {where_witel}
+  group by a.kode_witel, a.nama
+  """
+  
+  columns_location = ["kode_lokasi", "nama_lokasi", "penanggung_jawab"]
+  
+  sql_statement_location = f"""
+  select a.id, a.nama_lokasi, a.penanggung_jawab
+  from am_locations a
+  {where_location}
+  """
+  
+  columns_gedung = ["kode_gedung", "nama_gedung"]
+  
+  sql_statement_gedung = f"""
+  select a.kode_gedung, a.nama_gedung
+  from am_gedung a
+  {where_gedung}
+  """
+  
+  columns_lantai = ["kode_lantai", "nama_lantai", "kode_gedung"]
+  
+  sql_statement_lantai = f"""
+  select a.id, a.nama_lantai, a.kode_gedung_sima kode_gedung
+  from am_floors a
+  inner join am_gedung b on a.kode_gedung_sima=b.kode_gedung and b.kode_lokasi='11'
+  {where_lantai}
+  order by a.kode_gedung_sima asc
+  """
+  
+  columns_ruang = ["kode_ruang", "nama_ruang", "kode_lantai", "kode_gedung"]
+  
+  sql_statement_ruang = f"""
+  select a.id, a.peruntukan, a.floor_id, a.kode_gedung
+  from gsd_rooms a
+  inner join am_gedung b on a.kode_gedung=b.kode_gedung and b.kode_lokasi='11'
+  {where_ruang}
+  order by a.kode_gedung asc
+  """
+  
+  columns_jenis = ["kode_jenis", "nama_jenis"]
+  
+  sql_statement_jenis = f"""
+  select a.jenis_id kode_jenis, a.nama_jenis
+  from am_perangkat_jenis a
+  """
+  
+  columns_kategori = ["kode_kategori", "nama_kategori", "kode_jenis"]
+  
+  sql_statement_kategori = f"""
+  select a.kategori_id kode_kategori, a.nama_kategori, a.jenis_id kode_jenis
+  from am_perangkat_kategori a
+  """
+  
+  columns_subkategori = ["kode_kategori", "nama_kategori", "kode_jenis"]
+  
+  sql_statement_subkategori = f"""
+  select a.sub_kategori_id kode_subkategori, a.nama_sub_kategori, a.kategori_id kode_kategori
+  from am_perangkat_sub_kategori a
+  """
+  
+  columns_merk = ["kode_merk", "nama_merk"]
+  
+  sql_statement_merk = f"""
+  select a.kode_merk, a.nama_merk
+  from am_perangkat_merk a
+  """
+  
+  today = datetime.today()
+  unique_id = today.strftime('%Y%m%d%H%M%S')
+  file_name = f'UPDATE_PERANGKAT_{unique_id}.xlsx'
+  
   try:
+    writer = pandas.ExcelWriter(file_name, engine='openpyxl')
+    
     cursor = db.cursor()
+    cursor.execute(sql_statement_perangkat)
+    
+    dataframe_perangkat = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_perangkat)
+    dataframe_perangkat.to_excel(writer,index=False, sheet_name='DATA_PERANGKAT')
+    
+    workbook = writer.book
+    worksheet = workbook.active
+    
+    worksheet.merge_cells(start_row=1, start_column=30, end_row=6, end_column=35)
+    worksheet['AD1'].alignment = Alignment(wrap_text=True)
+    worksheet['AD1'].value = f"""
+    Catatan :\n
+    Mohon mengisi kolom updated_by dan updated_at\n
+    jika melakukan perubahan data perangkat
+    """
+    
+    worksheet['B1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['C1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['D1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['E1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['F1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['G1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['H1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['I1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['J1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['K1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['L1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    worksheet['M1'].fill = PatternFill(start_color='FFEA00',end_color='FFEA00',fill_type='solid')
+    
+    nsyyyymmdd = NamedStyle(name="nsyyyymmdd", number_format="YYYY-MM-DD")
+    nsyyyymm = NamedStyle(name="nsyyyymm", number_format="YYYY-MM")
+    
+    for i in range(2, len(dataframe_perangkat) + 2):
+      worksheet.cell(row=i, column=21).style = nsyyyymm
+      worksheet.cell(row=i, column=23).style = nsyyyymmdd
+      worksheet.cell(row=i, column=27).style = nsyyyymmdd
+      
+    cursor.execute(sql_statement_regional)
+    
+    dataframe_regional = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_regional)
+    dataframe_regional.to_excel(writer,index=False, sheet_name='DATA_REGIONAL')
+    
+    cursor.execute(sql_statement_area)
+    
+    dataframe_area = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_area)
+    dataframe_area.to_excel(writer,index=False, sheet_name='DATA_AREA')
+    
+    cursor.execute(sql_statement_bm)
+    
+    dataframe_bm = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_bm)
+    dataframe_bm.to_excel(writer,index=False, sheet_name='DATA_BM')
+    
+    cursor.execute(sql_statement_witel)
+    
+    dataframe_witel = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_witel)
+    dataframe_witel.to_excel(writer,index=False, sheet_name='DATA_WITEL')
+    
+    cursor.execute(sql_statement_location)
+    
+    dataframe_location = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_location)
+    dataframe_location.to_excel(writer,index=False, sheet_name='DATA_LOCATION')
+    
+    cursor.execute(sql_statement_gedung)
+    
+    dataframe_gedung = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_gedung)
+    dataframe_gedung.to_excel(writer,index=False, sheet_name='DATA_GEDUNG')
+    
+    cursor.execute(sql_statement_lantai)
+    
+    dataframe_lantai = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_lantai)
+    dataframe_lantai.to_excel(writer,index=False, sheet_name='DATA_LANTAI')
+    
+    cursor.execute(sql_statement_ruang)
+    
+    dataframe_ruang = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_ruang)
+    dataframe_ruang.to_excel(writer,index=False, sheet_name='DATA_RUANG')
+    
+    cursor.execute(sql_statement_jenis)
+    
+    dataframe_jenis = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_jenis)
+    dataframe_jenis.to_excel(writer,index=False, sheet_name='DATA_JENIS')
+    
+    cursor.execute(sql_statement_kategori)
+    
+    dataframe_kategori = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_kategori)
+    dataframe_kategori.to_excel(writer,index=False, sheet_name='DATA_KATEGORI')
+    
+    cursor.execute(sql_statement_subkategori)
+    
+    dataframe_subkategori = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_subkategori)
+    dataframe_subkategori.to_excel(writer,index=False, sheet_name='DATA_SUBKATEGORI')
+    
+    cursor.execute(sql_statement_merk)
+    
+    dataframe_merk = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns_merk)
+    dataframe_merk.to_excel(writer,index=False, sheet_name='DATA_MERK')
+    
+    headerResponse = {
+      'Content-Disposition': 'attachment; filename="'+file_name+'"'
+    }
+    
+    workbook.close()
+    writer.close()
+    
+    background_task.add_task(os.remove, file_name)
+    
+    del dataframe_perangkat
+    del dataframe_regional
+    del dataframe_area
+    del dataframe_bm
+    del dataframe_witel
+    del dataframe_location
+    del dataframe_gedung
+    del dataframe_lantai
+    del dataframe_ruang
+    del dataframe_jenis
+    del dataframe_kategori
+    del dataframe_subkategori
+    del dataframe_merk
+    
+    return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
     return {"status": False, "message": str(ex)}
   finally:
