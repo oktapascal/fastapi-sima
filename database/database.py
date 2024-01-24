@@ -34,7 +34,4 @@ class Database:
     config = "DRIVER={ODBC Driver 17 for SQL Server};"+f"SERVER={host},{port};DATABASE={database};UID={username};PWD={password};"
     connection = pyodbc.connect(config)
       
-    try:
-      return connection
-    except Exception as ex:
-      logging.exception(ex)
+    return connection

@@ -18,8 +18,14 @@ async def lifespan(app: FastAPI):
   app.state.sima_connection = database.Database(os.getenv('DB_USER1'),os.getenv('DB_PASSWORD1'),os.getenv('DB_HOST1'),os.getenv('DB_NAME1'))
   yield
 
+def connect_dbsima():
+  engine = database.Database(os.getenv('DB_USER1'),os.getenv('DB_PASSWORD1'),os.getenv('DB_HOST1'),os.getenv('DB_NAME1'))
   
-app = FastAPI(lifespan=lifespan)
+  dbsima_engine = engine.connect()
+  
+  return dbsima_engine
+
+app = FastAPI()
 
 """
 A function that serves as the root endpoint for the FastAPI application.
@@ -37,20 +43,18 @@ def root():
   return {'status': 'OK', 'message': 'Hello From Fastapi-SIMA'}
 
 @app.get('/test-db')
-def test_db(db: database.Database = Depends(lambda: app.state.sima_connection)):
-  dbsima = db.connect()
+def test_db():
   try:
+    dbsima = connect_dbsima()
     print("{c} is working".format(c=dbsima))
+    dbsima.close()
+    
     return {'status': 'OK', 'message': 'Success Connect Database'}
   except pyodbc.Error as ex:
     print("{c} is not working".format(c=dbsima))
-  finally:
-    dbsima.close()
 
 @app.get('/api/export/excel/perangkat')
-def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None,db: database.Database = Depends(lambda: app.state.sima_connection)):
-  dbsima = db.connect()
-  
+def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | None = None,kode_lokasi: str | None = None, tahun: str | None = None, kode_area: str | None = None, kode_fm: str | None = None, kode_bm: str | None = None, kode_ktg: str | None = None, kode_subktg: str | None = None, status_aktif: str | None = None):
   columns = ["no", "id_regional", "id_area", "nama_area", "id_bm", "nama_bm", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_room", "id_lantai",
   "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori", "nama_subkategori", "nama_perangkat", "is_ceklis", "kode_merk", "nama_merk", "satuan", "jumlah",
   "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "kode_milik", "nama_milik", "keterangan", "id_perangkat", "status_aktif", "tanggal_periksa", "nik_input", "updated_at"]
@@ -83,9 +87,10 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
   if status_aktif is not None and status_aktif != "" and status_aktif != "null":
     where = where + f"and isnull(a.status_aktif, '1') in ({status_aktif})"
     
-  cursor = dbsima.cursor()
-  
   try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
     cursor.execute(f"""
         select a.id no_perangkat, e.kode_area, a.kode_fm, l.nama nama_fm, a.kode_bm, m.nama nama_bm, a.kode_witel, k.nama nama_witel, a.kode_lokasi, d.nama_lokasi,
         a.kode_gedung, e.nama_gedung, a.kode_room, a.kode_lantai, g.nama_lantai, a.kode_jenis, h.nama_jenis,
@@ -120,6 +125,8 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     dataframe.to_excel(writer,index=False)
     
     writer.close()
+    cursor.close()
+    dbsima.close()
     
     headerResponse = {
       'Content-Disposition': 'attachment; filename="'+file_name+'"'
@@ -132,19 +139,15 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
     return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
     return {"status": False, "message": str(ex)}
-  finally:
-    cursor.close()
-    dbsima.close()
     
 @app.post('/api/import/csv/sap3')
-def import_csv_sap3(background_task: BackgroundTasks, file: UploadFile = File(...),db: database.Database = Depends(lambda: app.state.sima_connection)):
-  dbsima = db.connect()
-  
-  t0 = time.perf_counter()
-  
-  cursor = dbsima.cursor()
-  
+def import_csv_sap3(background_task: BackgroundTasks, file: UploadFile = File(...)):
   try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    t0 = time.perf_counter()
+    
     contents = file.file.read()
     
     with open(file.filename, 'wb') as f:
@@ -188,25 +191,24 @@ def import_csv_sap3(background_task: BackgroundTasks, file: UploadFile = File(..
       cursor.execute(sql_statement)
       cursor.commit()
     
+    file.file.close()
+    cursor.close()
+    dbsima.close()
+    
     background_task.add_task(os.remove, file.filename)
     
     return {"status": True, "message": "Import CSV berhasil", "read_time": read_time,"process_time": f"{time.perf_counter() - t0:.1f} seconds"}
   except Exception as ex:
     return {"status": False, "message": str(ex)}
-  finally:
-    file.file.close()
-    cursor.close()
-    dbsima.close()
     
 @app.post('/api/import/excel/sap3')
-def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(...),db: database.Database = Depends(lambda: app.state.sima_connection)):
-  dbsima = db.connect()
-  
-  t0 = time.perf_counter()
-  
-  cursor = dbsima.cursor()
-  
+def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(...)):
   try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    t0 = time.perf_counter()
+    
     contents = file.file.read()
     
     with open(file.filename, 'wb') as f:
@@ -249,19 +251,18 @@ def import_excel_sap3(background_task: BackgroundTasks, file: UploadFile = File(
       cursor.execute(sql_statement)
       cursor.commit()
     
+    file.file.close()
+    cursor.close()
+    dbsima.close()
+    
     background_task.add_task(os.remove, file.filename)
     
     return {"status": True, "message": "Import Excel berhasil", "read_time": read_time, "process_time": f"{time.perf_counter() - t0:.1f} seconds"}
   except Exception as ex:
     return {"status": False, "message": str(ex)}
-  finally:
-    cursor.close()
-    dbsima.close()
     
 @app.get('/api/template/perangkat-update')
-def export_template_update_perangkat(background_task: BackgroundTasks, kode_regional: str | None = None, kode_area: str | None = None, kode_bm: str | None = None, kode_witel: str | None = None, kode_gedung: str | None = None, db: database.Database = Depends(lambda: app.state.sima_connection)):
-  dbsima = db.connect()
-  
+def export_template_update_perangkat(background_task: BackgroundTasks, kode_regional: str | None = None, kode_area: str | None = None, kode_bm: str | None = None, kode_witel: str | None = None, kode_gedung: str | None = None):
   columns_perangkat = ["id", "kode_area", "kode_bm", "kode_witel", "kode_lokasi", "kode_gedung", "kode_lantai", "kode_room", "kode_milik", "kode_jenis", "kode_kategori", "kode_subkategori", "kode_merk", 
                       "jumlah", "satuan", "kapasitas", "satuan_kapasitas", "model", "no_seri", "tahun", "kondisi", "waktu_pengadaan", "cek_birawa", "tanggal_cek", "keterangan", 
                       "status_aktif", "updated_by", "updated_at"]
@@ -429,9 +430,10 @@ def export_template_update_perangkat(background_task: BackgroundTasks, kode_regi
   unique_id = today.strftime('%Y%m%d%H%M%S')
   file_name = f'UPDATE_PERANGKAT_{unique_id}.xlsx'
   
-  cursor = dbsima.cursor()
-  
   try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
     writer = pandas.ExcelWriter(file_name, engine='openpyxl')
     
     cursor.execute(sql_statement_perangkat)
@@ -537,6 +539,8 @@ def export_template_update_perangkat(background_task: BackgroundTasks, kode_regi
     
     workbook.close()
     writer.close()
+    cursor.close()
+    dbsima.close()
     
     background_task.add_task(os.remove, file_name)
     
@@ -557,19 +561,14 @@ def export_template_update_perangkat(background_task: BackgroundTasks, kode_regi
     return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
     return {"status": False, "message": str(ex)}
-  finally:
-    cursor.close()
-    dbsima.close()
     
 @app.post('/api/import/perangkat-update')
-def import_excel_perangkat_update(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form(), db: database.Database = Depends(lambda: app.state.sima_connection)):
-  dbsima = db.connect()
-  
-  t0 = time.perf_counter()
-  
-  cursor = dbsima.cursor()
-  
+def import_excel_perangkat_update(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form()):
   try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    t0 = time.perf_counter()
     
     contents = file.file.read()
     
@@ -612,12 +611,13 @@ def import_excel_perangkat_update(background_task: BackgroundTasks, file: Upload
       sql_statement += "COMMIT TRANSACTION"
       cursor.execute(sql_statement)
       cursor.commit()
-      
+    
+    file.file.close()
+    cursor.close()
+    dbsima.close()
+    
     background_task.add_task(os.remove, file.filename)
     
     return {"status": True, "message": "Import Excel berhasil", "read_time": read_time, "process_time": f"{time.perf_counter() - t0:.1f} seconds"}
   except Exception as ex:
     return {"status": False, "message": str(ex)}
-  finally:
-    cursor.close()
-    dbsima.close()
