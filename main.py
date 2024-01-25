@@ -4,19 +4,13 @@ import os
 import pandas
 import pyodbc
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, BackgroundTasks, File, UploadFile, Form
+from fastapi import FastAPI, BackgroundTasks, File, UploadFile, Form
 from fastapi.responses import FileResponse
-from contextlib import asynccontextmanager
 from openpyxl.styles import NamedStyle, PatternFill, Alignment
 
 from database import database
 
 load_dotenv()
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-  app.state.sima_connection = database.Database(os.getenv('DB_USER1'),os.getenv('DB_PASSWORD1'),os.getenv('DB_HOST1'),os.getenv('DB_NAME1'))
-  yield
 
 def connect_dbsima():
   engine = database.Database(os.getenv('DB_USER1'),os.getenv('DB_PASSWORD1'),os.getenv('DB_HOST1'),os.getenv('DB_NAME1'))
