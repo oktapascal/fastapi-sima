@@ -662,7 +662,7 @@ def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kod
     cursor.execute(sql_insert_statement)
     cursor.commit()
     
-    sql_update_statement = f"update sbr_d_tmp set nilai_base_rent = '{nilai_bs}' where kode_prop = '{kode_gedung}' and nik_input = '{nik_input}'"
+    sql_update_statement = f"update sbr_ref_tmp set nilai_base_rent = '{nilai_bs}' where kode_prop = '{kode_gedung}' and nik_input = '{nik_input}'"
     cursor.execute(sql_update_statement)
     cursor.commit()
     
