@@ -646,8 +646,6 @@ def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kod
     cursor.execute(sql_delete_statement)
     cursor.commit()
     
-    
-    
     nilai = calculate(var_model)
     nilai_bs = roundup(calculate(var_model))
     min_x = min(x)
