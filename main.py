@@ -7,6 +7,7 @@ from typing import List
 import pandas
 import pyodbc
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, BackgroundTasks, File, UploadFile, Form, Body
 from fastapi.responses import FileResponse
 from openpyxl.styles import NamedStyle, PatternFill, Alignment
@@ -24,6 +25,13 @@ def connect_dbsima():
   return dbsima_engine
 
 app = FastAPI()
+
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["*"],
+  allow_methods=["GET","POST"],
+  allow_headers=["*"]
+)
 
 """
 A function that serves as the root endpoint for the FastAPI application.
