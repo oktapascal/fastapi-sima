@@ -629,7 +629,7 @@ def import_excel_perangkat_update(background_task: BackgroundTasks, file: Upload
     return {"status": False, "message": str(ex)}
   
 @app.post('/api/scoring/linear-regression')
-def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kode_gedung: Annotated[str, Body(embed=True)], tipe_aset: Annotated[str, Body(embed=True)], rasio: Annotated[float, Body(embed=True)], var_model: Annotated[float, Body(embed=True)], x: Annotated[List[float], Body(embed=True)], y: Annotated[List[int], Body(embed=True)]):
+def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kode_aset: Annotated[str, Body(embed=True)], tipe_aset: Annotated[str, Body(embed=True)], rasio: Annotated[float, Body(embed=True)], var_model: Annotated[float, Body(embed=True)], x: Annotated[List[float], Body(embed=True)], y: Annotated[List[int], Body(embed=True)]):
   slope, intercept, r, p, std_err = stats.linregress(x, y)
   
   def calculate(x):
@@ -656,12 +656,12 @@ def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kod
     
     sql_insert_statement = f"""insert into sbr_m_tmp (kode_gedung,tipe_aset,rasio,nilai_bs,pengali,r_square,slope,intercept,r,p_value,standard_error,min_x,max_x,line_reg_start,
     line_reg_end,var_model,nilai,nik_input) 
-    values ('{kode_gedung}','{tipe_aset}','{rasio}','{nilai_bs}','0','{r_square}','{slope}','{intercept}','{r}','{p}','{std_err}','{min_x}','{max_x}','{line_reg_start}','{line_reg_end}',
+    values ('{kode_aset}','{tipe_aset}','{rasio}','{nilai_bs}','0','{r_square}','{slope}','{intercept}','{r}','{p}','{std_err}','{min_x}','{max_x}','{line_reg_start}','{line_reg_end}',
     '{var_model}','{nilai}', '{nik_input}')"""
     cursor.execute(sql_insert_statement)
     cursor.commit()
     
-    sql_update_statement = f"update sbr_ref_tmp set nilai_base_rent = '{nilai_bs}' where kode_prop = '{kode_gedung}' and nik_input = '{nik_input}'"
+    sql_update_statement = f"update sbr_ref_tmp set nilai_base_rent = '{nilai_bs}' where kode_prop = '{kode_aset}' and nik_input = '{nik_input}'"
     cursor.execute(sql_update_statement)
     cursor.commit()
     
