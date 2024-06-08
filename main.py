@@ -629,7 +629,7 @@ def import_excel_perangkat_update(background_task: BackgroundTasks, file: Upload
     return {"status": False, "message": str(ex)}
   
 @app.post('/api/scoring/linear-regression')
-def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kode_aset: Annotated[str, Body(embed=True)], tipe_aset: Annotated[str, Body(embed=True)], rasio: Annotated[float, Body(embed=True)], var_model: Annotated[float, Body(embed=True)], x: Annotated[List[float], Body(embed=True)], y: Annotated[List[int], Body(embed=True)]):
+def calculate_linear_regression(var_model: Annotated[float, Body(embed=True)], x: Annotated[List[float], Body(embed=True)], y: Annotated[List[int], Body(embed=True)]):
   slope, intercept, r, p, std_err = stats.linregress(x, y)
   
   def calculate(x):
@@ -639,13 +639,6 @@ def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kod
       return math.ceil(x)+0.000
       
   try:
-    dbsima = connect_dbsima()
-    cursor = dbsima.cursor()
-    
-    sql_delete_statement = f"delete from sbr_m_tmp where nik_input = '{nik_input}'"
-    cursor.execute(sql_delete_statement)
-    cursor.commit()
-    
     nilai = calculate(var_model)
     nilai_bs = roundup(calculate(var_model))
     min_x = min(x)
@@ -654,20 +647,8 @@ def calculate_linear_regression(nik_input: Annotated[str, Body(embed=True)], kod
     line_reg_end = calculate(max(x))
     r_square = r**2
     
-    sql_insert_statement = f"""insert into sbr_m_tmp (kode_gedung,tipe_aset,rasio,nilai_bs,pengali,r_square,slope,intercept,r,p_value,standard_error,min_x,max_x,line_reg_start,
-    line_reg_end,var_model,nilai,nik_input) 
-    values ('{kode_aset}','{tipe_aset}','{rasio}','{nilai_bs}','0','{r_square}','{slope}','{intercept}','{r}','{p}','{std_err}','{min_x}','{max_x}','{line_reg_start}','{line_reg_end}',
-    '{var_model}','{nilai}', '{nik_input}')"""
-    cursor.execute(sql_insert_statement)
-    cursor.commit()
+    data = {'nilai': nilai, 'nilai_bs': nilai_bs, 'var_model': var_model, 'r_squared': r_square, 'slope': slope, 'intercept': intercept, 'r': r, 'p': p, 'standard_error': std_err, 'min_x': min_x, 'max_x': max_x, 'line_reg_start': line_reg_start, 'line_ged_end': line_reg_end, 'x': x, 'y': y}
     
-    sql_update_statement = f"update sbr_ref_tmp set nilai_base_rent = '{nilai_bs}' where kode_prop = '{kode_aset}' and nik_input = '{nik_input}'"
-    cursor.execute(sql_update_statement)
-    cursor.commit()
-    
-    payload = {'r_squared': r_square, 'slope': slope, 'intercept': intercept, 'r': r, 'p': p, 'standard_error': std_err, 'min_x': min_x, 'max_x': max_x, 'line_reg_start': line_reg_start, 'line_ged_end': line_reg_end, 'x': x, 'y': y}
-    result = {'nilai': nilai, 'nilai_bs': nilai_bs, 'var_model': var_model}
-    
-    return {"status": True, "message": "Success", "payload": payload, "result": result}
+    return {"status": True, "message": "Success", "data": data}
   except Exception as ex:
     return {"status": False, "message": str(ex)}
