@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from datetime import datetime
 import math
 import time
@@ -8,7 +8,7 @@ import pandas
 import pyodbc
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, BackgroundTasks, File, UploadFile, Form, Body
+from fastapi import FastAPI, BackgroundTasks, File, UploadFile, Form, Body, Query
 from fastapi.responses import FileResponse
 from openpyxl.styles import NamedStyle, PatternFill, Alignment
 from scipy import stats
@@ -650,5 +650,232 @@ def calculate_linear_regression(var_model: Annotated[float, Body(embed=True)], x
     data = {'nilai': nilai, 'nilai_bs': nilai_bs, 'var_model': var_model, 'r_squared': r_square, 'slope': slope, 'intercept': intercept, 'r': r, 'p': p, 'standard_error': std_err, 'min_x': min_x, 'max_x': max_x, 'line_reg_start': line_reg_start, 'line_ged_end': line_reg_end, 'x': x, 'y': y}
     
     return {"status": True, "message": "Success", "data": data}
+  except Exception as ex:
+    return {"status": False, "message": str(ex)}
+  
+@app.get('/api/export/excel/notifikasi')
+def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optional[str] = Query(default=None), filter_dokumen: Optional[str] = Query(default=None), filter_waktu: Optional[str] = Query(default=None), nik: Optional[str] = Query(default=None)):
+  filter_aset_list = filter_aset.split(",") if filter_aset else []
+  filter_dokumen_list = filter_dokumen.split(",") if filter_dokumen else []
+  filter_waktu_list = filter_waktu.split(",") if filter_waktu else []
+  
+  columns = ["ID ASET", "NAMA ASET", "JENIS ASET", "JENIS DOKUMEN", "TANGGAL AKHIR", "JATUH TEMPO"]
+  data = []
+  
+  try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    cursor.execute(f"""
+    select a.kode_klp_menu tipe_user,b.kode_area
+    from hakakses a
+    inner join karyawan b on a.nik=b.nik and a.kode_lokasi=b.kode_lokasi
+    where a.nik='{nik}' and a.kode_lokasi='11';               
+    """)
+    
+    user = cursor.fetchone()
+    
+    where_regional = ""
+    if user[0] == "AREA": 
+      where_regional = f"""and b.kode_area = '{user[1]}'"""
+    
+    jatuh_tempo = ""
+    if "1m" in filter_waktu_list:
+      if jatuh_tempo == "":
+        jatuh_tempo = "a.tanggal_tenggat > DATEADD(MONTH, 1, GETDATE())"
+      else:
+        jatuh_tempo += "or a.tanggal_tenggat > DATEADD(MONTH, 1, GETDATE())"
+        
+    if "3w" in filter_waktu_list:
+      if jatuh_tempo == "":
+        jatuh_tempo = "a.tanggal_tenggat > DATEADD(WEEK, 3, GETDATE())"
+      else:
+        jatuh_tempo += "or a.tanggal_tenggat > DATEADD(WEEK, 3, GETDATE())"
+    if "2w" in filter_waktu_list:
+      if jatuh_tempo == "":
+        jatuh_tempo = "a.tanggal_tenggat > DATEADD(WEEK, 2, GETDATE())"
+      else:
+        jatuh_tempo += "or a.tanggal_tenggat > DATEADD(WEEK, 2, GETDATE())"
+    if "1w" in filter_waktu_list:
+      if jatuh_tempo == "":
+        jatuh_tempo = "a.tanggal_tenggat > DATEADD(WEEK, 1, GETDATE())"
+      else:
+        jatuh_tempo += "or a.tanggal_tenggat > DATEADD(WEEK, 1, GETDATE())"
+    if "terlambat" in filter_waktu_list:
+      if jatuh_tempo == "":
+        jatuh_tempo = "a.tanggal_tenggat < GETDATE()"
+      else:
+        jatuh_tempo += "or a.tanggal_tenggat < GETDATE()"
+    
+    if "gedung" in filter_aset_list:
+      list_dokumen = ""
+      if "pbb" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'PBB'"
+        else:
+          list_dokumen += ",'PBB'"
+      if "asuransi" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'ASURANSI'"
+        else:
+          list_dokumen += ",'ASURANSI'"
+      if "tenant" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'TENANT'"
+        else:
+          list_dokumen += ",'TENANT'"
+          
+      cursor.execute(f"""
+      select a.id, b.nama_gedung nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+      convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+      from am_notifikasi a
+      inner join am_gedung b on a.id=b.kode_gedung
+      where a.jenis_aset = 'GEDUNG' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+      order by a.tanggal_tenggat asc
+      """)
+      
+      for row in cursor.fetchall():
+        date1 = datetime.strptime(row[5], '%Y-%m-%d')
+        date2 = datetime.strptime(row[6], '%Y-%m-%d')
+        
+        if date1 < date2:
+          row[7] = "Sudah Habis"
+        else:
+          interval = date1 - date2
+          years = interval.days
+          months = (interval.days % 365)
+          days = (interval.days % 365) % 30
+          
+          keterangan = ""
+          if years > 0:
+            keterangan += f"{years} tahun "
+          if months > 0:
+            keterangan += f"{months} bulan "
+          if days > 0 or (years == 0 and months == 0):
+            keterangan += f"{days} hari"
+          
+          row[7] = keterangan
+          
+        data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+        
+    if "kbm" in filter_aset_list:
+      list_dokumen = ""
+      if "pajak" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'PAJAK'"
+        else:
+          list_dokumen += ",'PAJAK'"
+      if "asuransi" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'ASURANSI'"
+        else:
+          list_dokumen += ",'ASURANSI'"
+      if "stnk" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'STNK'"
+        else:
+          list_dokumen += ",'STNK'"
+      
+      cursor.execute(f"""
+      select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+      convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+      from am_notifikasi a
+      inner join am_kbm c on a.id=c.id
+      inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
+      where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+      order by a.tanggal_tenggat asc
+      """)
+      
+      for row in cursor:
+        date1 = datetime.strptime(row[5], '%Y-%m-%d')
+        date2 = datetime.strptime(row[6], '%Y-%m-%d')
+        
+        if date1 < date2:
+          row[7] = "Sudah Habis"
+        else:
+          interval = date1 - date2
+          years = interval.days
+          months = (interval.days % 365)
+          days = (interval.days % 365) % 30
+          
+          keterangan = ""
+          if years > 0:
+            keterangan += f"{years} tahun "
+          if months > 0:
+            keterangan += f"{months} bulan "
+          if days > 0 or (years == 0 and months == 0):
+            keterangan += f"{days} hari"
+          
+          row[7] = keterangan
+          
+        data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+      
+    if "perangkat" in filter_aset_list:
+      list_dokumen = ""
+      if "kondisi" in filter_dokumen_list:
+        if list_dokumen == "":
+          list_dokumen = "'KONDISI'"
+        else:
+          list_dokumen += ",'KONDISI'"
+          
+      cursor.execute(f"""
+      select a.id, c.nama_perangkat nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+      convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+      from am_notifikasi a
+      inner join dev_am_perangkat c on a.id=c.id and isnull(c.status_aktif, '1')='1'
+      inner join am_gedung b on b.kode_gedung=c.kode_gedung and b.kode_lokasi='11'
+      where a.jenis_aset = 'PERANGKAT' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+      order by a.tanggal_tenggat asc
+      """)
+      
+      for row in cursor.fetchall():
+        date1 = datetime.strptime(row[5], '%Y-%m-%d')
+        date2 = datetime.strptime(row[6], '%Y-%m-%d')
+        
+        if date1 < date2:
+          row[7] = "Sudah Habis"
+        else:
+          interval = date1 - date2
+          years = interval.days
+          months = (interval.days % 365)
+          days = (interval.days % 365) % 30
+          
+          keterangan = ""
+          if years > 0:
+            keterangan += f"{years} tahun "
+          if months > 0:
+            keterangan += f"{months} bulan "
+          if days > 0 or (years == 0 and months == 0):
+            keterangan += f"{days} hari"
+          
+          row[7] = keterangan
+          
+        data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+      
+      dataframe = pandas.DataFrame.from_records(data, columns=columns)
+      
+      today = datetime.today()
+      unique_id = today.strftime('%Y%m%d%H%M%S')
+    
+      file_name = f'DATA_NOTIFIKASI_{unique_id}.xlsx'
+      
+      writer = pandas.ExcelWriter(file_name)
+    
+      dataframe.to_excel(writer,index=False)
+      
+      writer.close()
+      cursor.close()
+      dbsima.close()
+      
+      headerResponse = {
+        'Content-Disposition': 'attachment; filename="'+file_name+'"'
+      }
+      
+      background_task.add_task(os.remove, file_name)
+      
+      del dataframe
+      
+      return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
+    return True;
   except Exception as ex:
     return {"status": False, "message": str(ex)}
