@@ -786,7 +786,7 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
       order by a.tanggal_tenggat asc
       """)
       
-      for row in cursor:
+      for row in cursor.fetchall():
         date1 = datetime.strptime(row[5], '%Y-%m-%d')
         date2 = datetime.strptime(row[6], '%Y-%m-%d')
         
