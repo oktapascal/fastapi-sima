@@ -879,3 +879,86 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
     return True;
   except Exception as ex:
     return {"status": False, "message": str(ex)}
+
+@app.get('/api/export/excel/dashboard-kbm')
+def export_excel_dashboardkbm(background_task: BackgroundTasks, filter_regional: Optional[str] = Query(default=None), filter_area: Optional[str] = Query(default=None), filter_pool: Optional[str] = Query(default=None), filter_gedung: Optional[str] = Query(default=None), filter_kepemilikan: Optional[str] = Query(default=None), filter_tipe: Optional[str] = Query(default=None), filter_search: Optional[str] = Query(default=None)):
+  filter_regional_list = filter_regional.split(",") if filter_regional is not None and filter_regional != "" and filter_regional != "null" else []
+  filter_area_list = filter_area.split(",") if filter_area is not None and filter_area != "" and filter_area != "null" else []
+  filter_pool_list = filter_pool.split(",") if filter_pool is not None and filter_pool != "" and filter_pool != "null" else []
+  filter_gedung_list = filter_gedung.split(",") if filter_gedung is not None and filter_gedung != "" and filter_gedung != "null" else []
+  filter_kepemilikan_list = filter_kepemilikan.split(",") if filter_kepemilikan is not None and filter_kepemilikan != "" and filter_kepemilikan != "null" else []
+  filter_tipe_list = filter_tipe.split(",") if filter_tipe is not None and filter_tipe != "" and filter_tipe != "null" else []
+  
+  def generate_where_in(filter):
+    in_clause = ""
+    
+    if isinstance(filter, list):
+      for key,value in enumerate(filter):
+        if key == 0:
+          in_clause = f"'{value}'"
+        else:
+          in_clause += f",'{value}'"
+    return in_clause
+  
+  filter_regional = generate_where_in(filter_regional_list) if len(filter_regional_list) > 0 else ""
+  in_regional = f"and a.reg_area in ({filter_regional})" if filter_regional != "" else ""
+  filter_area = generate_where_in(filter_area_list) if len(filter_area_list) > 0 else ""
+  in_area = f"and a.fm in ({filter_area})" if filter_area != "" else ""
+  filter_pool = generate_where_in(filter_pool_list) if len(filter_pool_list) > 0 else ""
+  in_pool = f"and a.pool_area in ({filter_pool})" if filter_pool != "" else ""
+  filter_gedung = generate_where_in(filter_gedung_list) if len(filter_gedung_list) > 0 else ""
+  in_gedung = f"and a.reg_area in ({filter_gedung})" if filter_gedung != "" else ""
+  filter_kepemilikan = generate_where_in(filter_kepemilikan_list) if len(filter_kepemilikan_list) > 0 else ""
+  in_kepemilikan = f"and a.kepemilikan in ({filter_kepemilikan})" if filter_kepemilikan != "" else ""
+  filter_tipe = generate_where_in(filter_tipe_list) if len(filter_tipe_list) > 0 else ""
+  in_tipe = f"and a.tipe in ({filter_tipe})" if filter_tipe != "" else ""
+  query_search = f"and (a.nopol like '%{filter_search}%' or a.nopol_awal like '%{filter_search}%' or a.lokasi_kbm like '%{filter_search}%')" if filter_search is not None and filter_search != "" and filter_search != "null" else ""
+  
+  columns = ["NOPOL", "NOPOL AWAL", "JENIS KENDARAAN", "MERK", "TIPE KENDARAAN", "TAHUN", "PERUNTUKAN", "LOKASI KBM", "REGIONAL", "KATEGORI MARKET", "USER", "NO ASET", "KONTRAK START", "KONTRAK END", "CUSTOMER", "AKTIVASI"]
+  try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    cursor.execute(f"""
+    select a.nopol,a.nopol_awal,isnull(d.nama, '-') nama_jenis,isnull(e.nama, '-') nama_merk,isnull(c.nama, '-') nama_tipe,a.tahun,
+    isnull(h.nama, '-') peruntukan,a.lokasi_kbm,isnull(b.nama,'-') nama_regional,isnull(j.nama,'-') nama_kategori,a.peruntukan kbm_user,
+    isnull(a.no_aset,'-') no_aset,a.kontrak_start,a.kontrak_end,isnull(f.nama, '-') customer,a.aktivasi
+    from am_kbm a
+    left join am_area b on a.reg_area=b.kode_area
+    left join am_kbm_type c on a.tipe=c.kode_type
+    left join am_kbm_jenis d on a.jenis=d.kode_jenis
+    left join am_kbm_merk e on a.merk=e.kode_merk
+    left join am_kbm_cust f on a.costumer=f.kode_cust
+    left join am_gedung g on a.id_gsd=g.kode_gedung and g.kode_lokasi='11'
+    left join am_kbm_milik h on a.milik_kbm=h.kode_milik
+    left join am_kbm_dispatcher i on a.dispatcher=i.kode_dispatcher
+    left join am_kbm_group_cust j on a.group_cust=j.kode_group
+    where a.aktivasi='ACTIVE' {in_regional} {in_area} {in_pool} {in_gedung} {in_kepemilikan} {in_tipe} {query_search}
+    """)
+    
+    dataframe = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns)
+    
+    today = datetime.today()
+    unique_id = today.strftime('%Y%m%d%H%M%S')
+    
+    file_name = f'DATA_KBM_{unique_id}.xlsx'
+    
+    writer = pandas.ExcelWriter(file_name)
+    
+    dataframe.to_excel(writer,index=False)
+    
+    writer.close()
+    cursor.close()
+    dbsima.close()
+    
+    headerResponse = {
+      'Content-Disposition': 'attachment; filename="'+file_name+'"'
+    }
+    
+    background_task.add_task(os.remove, file_name)
+    
+    del dataframe
+    
+    return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
+  except Exception as ex:
+    return {"status": False, "message": str(ex)}
