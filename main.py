@@ -725,38 +725,38 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
         else:
           list_dokumen += ",'TENANT'"
           
-      cursor.execute(f"""
-      select a.id, b.nama_gedung nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-      convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
-      from am_notifikasi a
-      inner join am_gedung b on a.id=b.kode_gedung
-      where a.jenis_aset = 'GEDUNG' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
-      order by a.tanggal_tenggat asc
-      """)
+    cursor.execute(f"""
+    select a.id, b.nama_gedung nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+    convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+    from am_notifikasi a
+    inner join am_gedung b on a.id=b.kode_gedung
+    where a.jenis_aset = 'GEDUNG' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+    order by a.tanggal_tenggat asc
+    """)
       
-      for row in cursor.fetchall():
-        date1 = datetime.strptime(row[5], '%Y-%m-%d')
-        date2 = datetime.strptime(row[6], '%Y-%m-%d')
+    for row in cursor.fetchall():
+      date1 = datetime.strptime(row[5], '%Y-%m-%d')
+      date2 = datetime.strptime(row[6], '%Y-%m-%d')
+      
+      if date1 < date2:
+        row[7] = "Sudah Habis"
+      else:
+        interval = date1 - date2
+        years = interval.days
+        months = (interval.days % 365)
+        days = (interval.days % 365) % 30
         
-        if date1 < date2:
-          row[7] = "Sudah Habis"
-        else:
-          interval = date1 - date2
-          years = interval.days
-          months = (interval.days % 365)
-          days = (interval.days % 365) % 30
+        keterangan = ""
+        if years > 0:
+          keterangan += f"{years} tahun "
+        if months > 0:
+          keterangan += f"{months} bulan "
+        if days > 0 or (years == 0 and months == 0):
+          keterangan += f"{days} hari"
+        
+        row[7] = keterangan
           
-          keterangan = ""
-          if years > 0:
-            keterangan += f"{years} tahun "
-          if months > 0:
-            keterangan += f"{months} bulan "
-          if days > 0 or (years == 0 and months == 0):
-            keterangan += f"{days} hari"
-          
-          row[7] = keterangan
-          
-        data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+      data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
         
     if "kbm" in filter_aset_list:
       list_dokumen = ""
@@ -776,39 +776,39 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
         else:
           list_dokumen += ",'STNK'"
       
-      cursor.execute(f"""
-      select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-      convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
-      from am_notifikasi a
-      inner join am_kbm c on a.id=c.id
-      inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
-      where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
-      order by a.tanggal_tenggat asc
-      """)
+    cursor.execute(f"""
+    select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+    convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+    from am_notifikasi a
+    inner join am_kbm c on a.id=c.id
+    inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
+    where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+    order by a.tanggal_tenggat asc
+    """)
       
-      for row in cursor.fetchall():
-        date1 = datetime.strptime(row[5], '%Y-%m-%d')
-        date2 = datetime.strptime(row[6], '%Y-%m-%d')
+    for row in cursor.fetchall():
+      date1 = datetime.strptime(row[5], '%Y-%m-%d')
+      date2 = datetime.strptime(row[6], '%Y-%m-%d')
+      
+      if date1 < date2:
+        row[7] = "Sudah Habis"
+      else:
+        interval = date1 - date2
+        years = interval.days
+        months = (interval.days % 365)
+        days = (interval.days % 365) % 30
         
-        if date1 < date2:
-          row[7] = "Sudah Habis"
-        else:
-          interval = date1 - date2
-          years = interval.days
-          months = (interval.days % 365)
-          days = (interval.days % 365) % 30
+        keterangan = ""
+        if years > 0:
+          keterangan += f"{years} tahun "
+        if months > 0:
+          keterangan += f"{months} bulan "
+        if days > 0 or (years == 0 and months == 0):
+          keterangan += f"{days} hari"
+        
+        row[7] = keterangan
           
-          keterangan = ""
-          if years > 0:
-            keterangan += f"{years} tahun "
-          if months > 0:
-            keterangan += f"{months} bulan "
-          if days > 0 or (years == 0 and months == 0):
-            keterangan += f"{days} hari"
-          
-          row[7] = keterangan
-          
-        data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+      data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
       
     if "perangkat" in filter_aset_list:
       list_dokumen = ""
@@ -852,31 +852,30 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
           
         data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
       
-      dataframe = pandas.DataFrame.from_records(data, columns=columns)
+    dataframe = pandas.DataFrame.from_records(data, columns=columns)
       
-      today = datetime.today()
-      unique_id = today.strftime('%Y%m%d%H%M%S')
+    today = datetime.today()
+    unique_id = today.strftime('%Y%m%d%H%M%S')
     
-      file_name = f'DATA_NOTIFIKASI_{unique_id}.xlsx'
+    file_name = f'DATA_NOTIFIKASI_{unique_id}.xlsx'
       
-      writer = pandas.ExcelWriter(file_name)
+    writer = pandas.ExcelWriter(file_name)
     
-      dataframe.to_excel(writer,index=False)
+    dataframe.to_excel(writer,index=False)
       
-      writer.close()
-      cursor.close()
-      dbsima.close()
+    writer.close()
+    cursor.close()
+    dbsima.close()
       
-      headerResponse = {
-        'Content-Disposition': 'attachment; filename="'+file_name+'"'
-      }
+    headerResponse = {
+      'Content-Disposition': 'attachment; filename="'+file_name+'"'
+    }
       
-      background_task.add_task(os.remove, file_name)
+    background_task.add_task(os.remove, file_name)
       
-      del dataframe
+    del dataframe
       
-      return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
-    return True;
+    return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
   except Exception as ex:
     return {"status": False, "message": str(ex)}
 
