@@ -906,7 +906,7 @@ def export_excel_dashboardkbm(background_task: BackgroundTasks, filter_regional:
   filter_pool = generate_where_in(filter_pool_list) if len(filter_pool_list) > 0 else ""
   in_pool = f"and a.pool_area in ({filter_pool})" if filter_pool != "" else ""
   filter_gedung = generate_where_in(filter_gedung_list) if len(filter_gedung_list) > 0 else ""
-  in_gedung = f"and a.reg_area in ({filter_gedung})" if filter_gedung != "" else ""
+  in_gedung = f"and a.id_gsd in ({filter_gedung})" if filter_gedung != "" else ""
   filter_kepemilikan = generate_where_in(filter_kepemilikan_list) if len(filter_kepemilikan_list) > 0 else ""
   in_kepemilikan = f"and a.kepemilikan in ({filter_kepemilikan})" if filter_kepemilikan != "" else ""
   filter_tipe = generate_where_in(filter_tipe_list) if len(filter_tipe_list) > 0 else ""
@@ -941,6 +941,103 @@ def export_excel_dashboardkbm(background_task: BackgroundTasks, filter_regional:
     unique_id = today.strftime('%Y%m%d%H%M%S')
     
     file_name = f'DATA_KBM_{unique_id}.xlsx'
+    
+    writer = pandas.ExcelWriter(file_name)
+    
+    dataframe.to_excel(writer,index=False)
+    
+    writer.close()
+    cursor.close()
+    dbsima.close()
+    
+    headerResponse = {
+      'Content-Disposition': 'attachment; filename="'+file_name+'"'
+    }
+    
+    background_task.add_task(os.remove, file_name)
+    
+    del dataframe
+    
+    return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
+  except Exception as ex:
+    return {"status": False, "message": str(ex)}
+  
+@app.get('/api/export/excel/v2/dashboard-perangkat')
+def export_excel_v2_perangkat(background_task: BackgroundTasks, filter_regional: Optional[str] = Query(default=None), filter_area: Optional[str] = Query(default=None), filter_bm: Optional[str] = Query(default=None), filter_gedung: Optional[str] = Query(default=None), filter_update: Optional[str] = Query(default=None), filter_jenis: Optional[str] = Query(default=None), filter_search: Optional[str] = Query(default=None)):
+  filter_regional_list = filter_regional.split(",") if filter_regional is not None and filter_regional != "" and filter_regional != "null" else []
+  filter_area_list = filter_area.split(",") if filter_area is not None and filter_area != "" and filter_area != "null" else []
+  filter_bm_list = filter_bm.split(",") if filter_bm is not None and filter_bm != "" and filter_bm != "null" else []
+  filter_gedung_list = filter_gedung.split(",") if filter_gedung is not None and filter_gedung != "" and filter_gedung != "null" else []
+  filter_jenis_list = filter_jenis.split(",") if filter_jenis is not None and filter_jenis != "" and filter_jenis != "null" else []
+  filter_update_list = filter_update.split(",") if filter_update is not None and filter_update != "" and filter_update != "null" else []
+  
+  def generate_where_in(filter):
+    in_clause = ""
+    
+    if isinstance(filter, list):
+      for key,value in enumerate(filter):
+        if key == 0:
+          in_clause = f"'{value}'"
+        else:
+          in_clause += f",'{value}'"
+    return in_clause
+  
+  filter_regional = generate_where_in(filter_regional_list) if len(filter_regional_list) > 0 else ""
+  in_regional = f"and b.kode_area in ({filter_regional})" if filter_regional != "" else ""
+  filter_area = generate_where_in(filter_area_list) if len(filter_area_list) > 0 else ""
+  in_area = f"and b.kode_fm in ({filter_area})" if filter_area != "" else ""
+  filter_bm = generate_where_in(filter_bm_list) if len(filter_bm_list) > 0 else ""
+  in_bm = f"and b.kode_bm in ({filter_bm})" if filter_bm != "" else ""
+  filter_gedung = generate_where_in(filter_gedung_list) if len(filter_gedung_list) > 0 else ""
+  in_gedung = f"and a.kode_gedung in ({filter_gedung})" if filter_gedung != "" else ""
+  filter_jenis = generate_where_in(filter_jenis_list) if len(filter_jenis_list) > 0 else ""
+  in_jenis = f"and a.kode_jenis in ({filter_jenis})" if filter_jenis != "" else ""
+  
+  between_update = (
+    f"FORMAT(a.tgl_input, 'yyyy-MM') between '{filter_update_list[0]}' and '{filter_update_list[1]}'" 
+    if filter_update_list is not None and len(filter_update_list) > 1 
+    else f"FORMAT(a.tgl_input, 'yyyy-MM') = '{filter_update_list[0]}'" 
+    if filter_update_list is not None and len(filter_update_list) == 1
+    else ""
+  )
+  query_search = f"and (a.nama_perangkat like '%{filter_search}%' or a.id_perangkat like '%{filter_search}%' or l.nama_merk like '%{filter_search}%' or b.nama_gedung like '%{filter_search}%')" if filter_search is not None and filter_search != "" and filter_search != "null" else ""
+  
+  columns = ["no", "id_regional", "id_area", "nama_area", "id_bm", "nama_bm", "id_witel", "nama_witel", "id_location", "nama_lokasi", "id_gedung", "nama_gedung", "id_room", "id_lantai",
+  "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori", "nama_subkategori", "nama_perangkat", "is_ceklis", "kode_merk", "nama_merk", "satuan", "jumlah",
+  "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "kode_milik", "nama_milik", "keterangan", "id_perangkat", "status_aktif", "tanggal_periksa", "nik_input", "updated_at"]
+    
+  try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    cursor.execute(f"""
+        select a.id no_perangkat, b.kode_area, b.kode_fm, j.nama nama_fm, a.kode_bm, k.nama nama_bm, b.kode_witel, i.nama nama_witel, a.kode_lokasi, c.nama_lokasi,
+        a.kode_gedung, b.nama_gedung, a.kode_room, a.kode_lantai, e.nama_lantai, a.kode_jenis, f.nama_jenis,
+        a.kode_kategori, g.nama_kategori, a.kode_subkategori, h.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.kode_merk, l.nama_merk, a.satuan, a.jumlah,
+        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, m.nama nama_milik, a.keterangan, a.id_perangkat, 
+        case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, a.kondisi_terakhir, a.nik_user, a.tgl_input
+        from dev_am_perangkat a
+        inner join am_gedung b on a.kode_gedung=b.kode_gedung and b.kode_lokasi='11'
+        inner join am_locations c on a.kode_lokasi=c.id
+        inner join gsd_rooms d on a.kode_room = d.id
+        inner join am_floors e on a.kode_lantai=e.id
+        left join am_perangkat_jenis f on a.kode_jenis=f.jenis_id
+        left join am_perangkat_kategori g on a.kode_kategori=g.kategori_id
+        left join am_perangkat_sub_kategori h on a.kode_subkategori=h.sub_kategori_id
+        left join am_witel i on b.kode_witel=i.kode_witel
+        left join am_fm j on a.kode_fm=j.kode_fm
+        left join am_bm k on a.kode_bm=k.kode_bm
+        left join am_perangkat_merk l on a.kode_merk=l.kode_merk
+        left join am_milik m on a.kode_milik=m.kode_milik
+        where e.flag_aktif <> '3' {in_regional} {in_area} {in_bm} {in_gedung} {in_jenis} {between_update} {query_search}
+      """)
+    
+    dataframe = pandas.DataFrame.from_records(cursor.fetchall(), columns=columns)
+    
+    today = datetime.today()
+    unique_id = today.strftime('%Y%m%d%H%M%S')
+    
+    file_name = f'DATA_PERANGKAT_{unique_id}.xlsx'
     
     writer = pandas.ExcelWriter(file_name)
     
