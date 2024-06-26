@@ -641,6 +641,10 @@ def calculate_linear_regression(var_model: Annotated[float, Body(embed=True)], x
   try:
     nilai = calculate(var_model)
     nilai_bs = roundup(calculate(var_model))
+    
+    if nilai_bs < 0:
+      nilai_bs = nilai_bs*-1
+    
     min_x = min(x)
     max_x = max(x)
     line_reg_start = calculate(min(x))
