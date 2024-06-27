@@ -1135,5 +1135,76 @@ def import_excel_data_revenue(background_task: BackgroundTasks, file: UploadFile
     
     return {"status": True, "message": "Import Excel berhasil", "read_time": read_time, "process_time": f"{time.perf_counter() - t0:.1f} seconds"}
   except Exception as ex:
-    print(ex)
+    return {"status": False, "message": str(ex)}
+  
+@app.post('/api/import/data-cost')
+def import_excel_data_cost(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form(), periode: str = Form()):
+  t0 = time.perf_counter()
+  
+  today = datetime.today()
+  tanggal_input = today.strftime('%Y-%m-%d %H:%M:%S')
+  
+  try:
+    dbsima = connect_dbsima()
+    cursor = dbsima.cursor()
+    
+    contents = file.file.read()
+    
+    with open(file.filename, 'wb') as f:
+      f.write(contents)
+      
+    # skip baca baris ketiga
+    # konversi kolom "ID GSD" menjadi string agar "0" didepan tidak dihilangkan
+    dataframe = pandas.read_excel(file.filename,header=None,skiprows=[2],dtype={'ID GSD': str})
+      
+    read_time = f"{time.perf_counter() - t0:.1f} seconds"
+    
+    # Menghapus baris pertama dari dataframe
+    df = dataframe.drop(0)
+    # Melakukan iterasi untuk nilai i dalam rentang dari 1 hingga panjang baris pertama dataframe
+    for i in range(1, len(df.iloc[0])):
+      # Jika nilai pada baris pertama dan kolom i adalah NaN,
+      # maka nilai tersebut akan diisi dengan nilai pada baris pertama dan kolom i-1 (sebelumnya)
+      if pandas.isna(df.iloc[0,i]):
+        df.iloc[0,i] = df.iloc[0,i-1]
+    
+    data = []
+    # Melakukan iterasi untuk nilai i dalam rentang dari 2 hingga panjang baris dari kolom pertama dataframe
+    for i in range(2, len(df.iloc[0:,0])):
+      # Melakukan iterasi untuk nilai i dalam rentang dari 1 hingga panjang baris pertama dataframe
+      for j in range(1, len(df.iloc[0])):
+        data.append(dict(kode_gedung=df.iloc[i,0],kode_cost=df.iloc[0,j],kode_cost_detail=df.iloc[1,j],nilai=df.iloc[i,j]))
+    
+    sql_statement = f"delete from am_perf_gt_trans_cost_tmp where nik_input='{nik}'"
+    cursor.execute(sql_statement)
+    cursor.commit()
+    
+    count = 0
+    sql_statement = "BEGIN TRANSACTION \r\n"
+    
+    for i in range(0, len(data)):
+      count += 1
+      
+      sql_statement += f"""
+      insert into am_perf_gt_trans_cost_tmp (kode_gedung,kode_cost,kode_cost_detail,nilai,periode,nik_input,tanggal_input)
+      values ('{data[i]['kode_gedung']}','{data[i]['kode_cost']}','{data[i]['kode_cost_detail']}','{data[i]['nilai']}','{periode}','{nik}','{tanggal_input}')
+      """
+      
+      if count % 100 == 0:
+        sql_statement += "COMMIT TRANSACTION"
+        cursor.execute(sql_statement)
+        cursor.commit()
+        sql_statement = "BEGIN TRANSACTION \r\n"
+    
+    if sql_statement != "BEGIN TRANSACTION \r\n":
+      sql_statement += "COMMIT TRANSACTION"
+      cursor.execute(sql_statement)
+      cursor.commit()
+    
+    file.file.close()
+    
+    background_task.add_task(os.remove, file.filename)
+    
+    return {"status": True, "message": "Import Excel berhasil", "read_time": read_time, "process_time": f"{time.perf_counter() - t0:.1f} seconds"}
+  except Exception as ex:
     return {"status": False, "message": str(ex)}
