@@ -1065,7 +1065,7 @@ def export_excel_v2_perangkat(background_task: BackgroundTasks, filter_regional:
     return {"status": False, "message": str(ex)}
   
 @app.post('/api/performance/import/data-revenue')
-def import_excel_data_revenue(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form(), periode: str = Form()):
+def import_excel_performance_data_revenue(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form(), periode: str = Form()):
   t0 = time.perf_counter()
   
   today = datetime.today()
@@ -1138,7 +1138,7 @@ def import_excel_data_revenue(background_task: BackgroundTasks, file: UploadFile
     return {"status": False, "message": str(ex)}
   
 @app.post('/api/performance/import/data-cost')
-def import_excel_data_cost(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form(), periode: str = Form()):
+def import_excel_performance_data_cost(background_task: BackgroundTasks, file: UploadFile = File(...), nik: str = Form(), periode: str = Form()):
   t0 = time.perf_counter()
   
   today = datetime.today()
