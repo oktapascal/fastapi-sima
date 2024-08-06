@@ -1290,7 +1290,7 @@ def import_excel_performance_data_cost(background_task: BackgroundTasks, file: U
 class BaseRentBatch(BaseModel):
     kode_aset: str
     var_model: float
-    y: List[int]
+    y: List[float]
     x: List[float]
 
 
