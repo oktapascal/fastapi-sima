@@ -1312,6 +1312,9 @@ def calculate_linear_regression(assets: List[BaseRentBatch]):
             if nilai_bs < 0:
                 nilai_bs = nilai_bs * -1
 
+            if nilai < 0:
+                nilai = nilai * -1
+
             min_x = min(asset.x)
             max_x = max(asset.x)
             line_reg_start = calculate(slope, min(asset.x), intercept)
