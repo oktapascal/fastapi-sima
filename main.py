@@ -731,6 +731,12 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
             else:
                 jatuh_tempo += "or a.tanggal_tenggat > DATEADD(MONTH, 1, GETDATE())"
 
+        if "3m" in filter_waktu_list:
+            if jatuh_tempo == "":
+                jatuh_tempo = "a.tanggal_tenggat > DATEADD(MONTH, 3, GETDATE())"
+            else:
+                jatuh_tempo += "or a.tanggal_tenggat > DATEADD(MONTH, 3, GETDATE())"
+
         if "3w" in filter_waktu_list:
             if jatuh_tempo == "":
                 jatuh_tempo = "a.tanggal_tenggat > DATEADD(WEEK, 3, GETDATE())"
@@ -820,6 +826,11 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
                     list_dokumen = "'STNK'"
                 else:
                     list_dokumen += ",'STNK'"
+            if "kontrak" in filter_dokumen_list:
+                if list_dokumen == "":
+                    list_dokumen = "'KONTRAK'"
+                else:
+                    list_dokumen += ",'KONTRAK'"
 
         cursor.execute(f"""
     select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
