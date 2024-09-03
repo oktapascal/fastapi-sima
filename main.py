@@ -704,7 +704,7 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
     filter_dokumen_list = filter_dokumen.split(",") if filter_dokumen else []
     filter_waktu_list = filter_waktu.split(",") if filter_waktu else []
 
-    columns = ["ID ASET", "NAMA ASET", "JENIS ASET", "JENIS DOKUMEN", "TANGGAL AKHIR", "JATUH TEMPO"]
+    columns = ["ID ASET", "NAMA ASET", "JENIS DOKUMEN", "JENIS ASET", "TANGGAL AKHIR", "JATUH TEMPO"]
     data = []
 
     try:
