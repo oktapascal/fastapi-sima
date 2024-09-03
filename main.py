@@ -833,14 +833,14 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
                     list_dokumen += ",'KONTRAK'"
 
         cursor.execute(f"""
-    select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-    convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
-    from am_notifikasi a
-    inner join am_kbm c on a.id=c.id
-    inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
-    where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
-    order by a.tanggal_tenggat asc
-    """)
+        select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+        convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+        from am_notifikasi a
+        inner join am_kbm c on a.id=c.id
+        inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
+        where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+        order by a.tanggal_tenggat asc
+        """)
 
         for row in cursor.fetchall():
             date1 = datetime.strptime(row[5], '%Y-%m-%d')
