@@ -832,39 +832,39 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
                 else:
                     list_dokumen += ",'KONTRAK'"
 
-        cursor.execute(f"""
-        select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-        convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
-        from am_notifikasi a
-        inner join am_kbm c on a.id=c.id
-        inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
-        where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
-        order by a.tanggal_tenggat asc
-        """)
+            cursor.execute(f"""
+            select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
+            convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+            from am_notifikasi a
+            inner join am_kbm c on a.id=c.id
+            inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
+            where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
+            order by a.tanggal_tenggat asc
+            """)
 
-        for row in cursor.fetchall():
-            date1 = datetime.strptime(row[5], '%Y-%m-%d')
-            date2 = datetime.strptime(row[6], '%Y-%m-%d')
+            for row in cursor.fetchall():
+                date1 = datetime.strptime(row[5], '%Y-%m-%d')
+                date2 = datetime.strptime(row[6], '%Y-%m-%d')
 
-            if date1 < date2:
-                row[7] = "Sudah Habis"
-            else:
-                interval = date1 - date2
-                years = interval.days
-                months = (interval.days % 365)
-                days = (interval.days % 365) % 30
+                if date1 < date2:
+                    row[7] = "Sudah Habis"
+                else:
+                    interval = date1 - date2
+                    years = interval.days
+                    months = (interval.days % 365)
+                    days = (interval.days % 365) % 30
 
-                keterangan = ""
-                if years > 0:
-                    keterangan += f"{years} tahun "
-                if months > 0:
-                    keterangan += f"{months} bulan "
-                if days > 0 or (years == 0 and months == 0):
-                    keterangan += f"{days} hari"
+                    keterangan = ""
+                    if years > 0:
+                        keterangan += f"{years} tahun "
+                    if months > 0:
+                        keterangan += f"{months} bulan "
+                    if days > 0 or (years == 0 and months == 0):
+                        keterangan += f"{days} hari"
 
-                row[7] = keterangan
+                    row[7] = keterangan
 
-            data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+                data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
 
         if "perangkat" in filter_aset_list:
             list_dokumen = ""
