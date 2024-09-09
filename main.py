@@ -704,7 +704,7 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
     filter_dokumen_list = filter_dokumen.split(",") if filter_dokumen else []
     filter_waktu_list = filter_waktu.split(",") if filter_waktu else []
 
-    columns = ["ID ASET", "NAMA ASET", "JENIS DOKUMEN", "JENIS ASET", "TANGGAL AKHIR", "JATUH TEMPO"]
+    columns = ["ID ASET", "NAMA ASET", "JENIS DOKUMEN", "JENIS ASET", "TANGGAL AKHIR", "JATUH TEMPO", "REGIONAL"]
     data = []
 
     try:
@@ -778,9 +778,10 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
 
             cursor.execute(f"""
             select a.id, b.nama_gedung nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-            convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+            convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo, c.nama
             from am_notifikasi a
             inner join am_gedung b on a.id=b.kode_gedung
+            inner join am_area c on b.kode_area=c.kode_area and b.kode_lokasi=c.kode_lokasi
             where a.jenis_aset = 'GEDUNG' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
             order by a.tanggal_tenggat asc
             """)
@@ -807,7 +808,7 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
 
                     row[7] = keterangan
 
-                data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+                data.append([row[0], row[1], row[2], row[3], row[4], row[7], row[8]])
 
         if "kbm" in filter_aset_list:
             list_dokumen = ""
@@ -834,10 +835,11 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
 
             cursor.execute(f"""
             select a.id, c.nopol nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-            convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+            convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo, d.nama
             from am_notifikasi a
             inner join am_kbm c on a.id=c.id
             inner join am_gedung b on b.kode_gedung=c.id_gsd and b.kode_lokasi='11'
+            inner join am_area d on b.kode_area=d.kode_area and b.kode_lokasi=d.kode_lokasi
             where a.jenis_aset = 'KBM' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
             order by a.tanggal_tenggat asc
             """)
@@ -864,7 +866,7 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
 
                     row[7] = keterangan
 
-                data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+                data.append([row[0], row[1], row[2], row[3], row[4], row[7], row[8]])
 
         if "perangkat" in filter_aset_list:
             list_dokumen = ""
@@ -876,10 +878,11 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
 
             cursor.execute(f"""
           select a.id, c.nama_perangkat nama_aset, a.jenis_notif, a.jenis_aset, convert(varchar,a.tanggal_tenggat,103) deadline_date, CONVERT(VARCHAR,a.tanggal_tenggat,120) tanggal_tenggat,
-          convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo
+          convert(varchar, GETDATE(), 23) tanggal_now, '' jatuh_tempo, d.nama
           from am_notifikasi a
           inner join dev_am_perangkat c on a.id=c.id and isnull(c.status_aktif, '1')='1'
           inner join am_gedung b on b.kode_gedung=c.kode_gedung and b.kode_lokasi='11'
+          inner join am_area d on b.kode_area=d.kode_area and b.kode_lokasi=d.kode_lokasi
           where a.jenis_aset = 'PERANGKAT' {where_regional} and a.jenis_notif in ({list_dokumen}) and ({jatuh_tempo})
           order by a.tanggal_tenggat asc
           """)
@@ -906,7 +909,7 @@ def export_excel_notifikasi(background_task: BackgroundTasks, filter_aset: Optio
 
                     row[7] = keterangan
 
-                data.append([row[0], row[1], row[2], row[3], row[4], row[7]])
+                data.append([row[0], row[1], row[2], row[3], row[4], row[7], row[8]])
 
         dataframe = pandas.DataFrame.from_records(data, columns=columns)
 
