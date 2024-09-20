@@ -353,7 +353,7 @@ def export_template_update_perangkat(background_task: BackgroundTasks, kode_regi
         where_ruang = where_ruang + f"and a.kode_gedung = '{kode_gedung}'"
 
     sql_statement_perangkat = f"""
-  select top 20 a.id, a.kode_fm, a.kode_bm, a.kode_witel, a.kode_lokasi, a.kode_gedung, a.kode_lantai, a.kode_room, a.kode_milik, a.kode_jenis, a.kode_kategori, a.kode_subkategori, a.kode_merk, a.jumlah,
+  select a.id, a.kode_fm, a.kode_bm, a.kode_witel, a.kode_lokasi, a.kode_gedung, a.kode_lantai, a.kode_room, a.kode_milik, a.kode_jenis, a.kode_kategori, a.kode_subkategori, a.kode_merk, a.jumlah,
   a.satuan, a.kapasitas, a.satuan_kapasitas, a.model, a.no_seri, a.tahun, a.kondisi, a.tahun_pengadaan, a.is_ceklis, a.kondisi_terakhir, a.keterangan, isnull(a.status_aktif, 1) status_aktif, '' updated_by, '' updated_at
   from dev_am_perangkat a
   inner join am_gedung b on a.kode_gedung=b.kode_gedung and b.kode_lokasi='11'
