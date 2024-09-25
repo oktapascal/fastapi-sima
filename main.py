@@ -349,7 +349,7 @@ def export_template_update_perangkat(background_task: BackgroundTasks, kode_regi
     if kode_gedung is not None and kode_gedung != "" and kode_gedung != "null":
         where_perangkat = where_perangkat + f"and a.kode_gedung = '{kode_gedung}'"
         where_gedung = where_gedung + f"and a.kode_gedung = '{kode_gedung}'"
-        where_lantai = where_lantai + f"and a.kode_gedung = '{kode_gedung}'"
+        where_lantai = where_lantai + f"and a.kode_gedung_sima = '{kode_gedung}'"
         where_ruang = where_ruang + f"and a.kode_gedung = '{kode_gedung}'"
 
     sql_statement_perangkat = f"""
