@@ -116,7 +116,7 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
         select a.id no_perangkat, e.kode_area, a.kode_fm, l.nama nama_fm, a.kode_bm, m.nama nama_bm, a.kode_witel, k.nama nama_witel, a.kode_lokasi, d.nama_lokasi,
         a.kode_gedung, e.nama_gedung, a.kode_room, a.kode_lantai, g.nama_lantai, a.kode_jenis, h.nama_jenis,
         a.kode_kategori, i.nama_kategori, a.kode_subkategori, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.kode_merk, n.nama_merk, a.satuan, a.jumlah,
-        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, o.nama nama_milik, a.keterangan, a.id_perangkat, 
+        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, o.nama nama_milik, a.keterangan, concat(a.prefix,'-',a.indeks) id_perangkat, 
         case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, a.kondisi_terakhir, a.nik_user, a.tgl_input
         from dev_am_perangkat a
         inner join am_gedung as e ON e.kode_gedung = a.kode_gedung and e.kode_lokasi='11'
@@ -1102,7 +1102,7 @@ def export_excel_v2_perangkat(background_task: BackgroundTasks, filter_regional:
         select a.id no_perangkat, b.kode_area, b.kode_fm, j.nama nama_fm, a.kode_bm, k.nama nama_bm, b.kode_witel, i.nama nama_witel, a.kode_lokasi, c.nama_lokasi,
         a.kode_gedung, b.nama_gedung, a.kode_room, a.kode_lantai, e.nama_lantai, a.kode_jenis, f.nama_jenis,
         a.kode_kategori, g.nama_kategori, a.kode_subkategori, h.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.kode_merk, l.nama_merk, a.satuan, a.jumlah,
-        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, m.nama nama_milik, a.keterangan, a.id_perangkat, 
+        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, m.nama nama_milik, a.keterangan, concat(a.prefix,'-',a.indeks) id_perangkat, 
         case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, a.kondisi_terakhir, a.nik_user, a.tgl_input
         from dev_am_perangkat a
         inner join am_gedung b on a.kode_gedung=b.kode_gedung and b.kode_lokasi='11'
