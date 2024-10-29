@@ -1092,7 +1092,7 @@ def export_excel_v2_perangkat(background_task: BackgroundTasks, filter_regional:
                "nama_lantai", "id_jenis", "nama_jenis", "id_kategori", "nama_kategori", "id_subkategori",
                "nama_subkategori", "nama_perangkat", "is_ceklis", "kode_merk", "nama_merk", "satuan", "jumlah",
                "kapasitas", "no_seri", "tipe", "tahun", "kondisi", "kode_milik", "nama_milik", "keterangan",
-               "id_perangkat", "status_aktif", "tanggal_periksa", "nik_input", "updated_at"]
+               "id_perangkat","id_perangkat_lama", "status_aktif", "tanggal_periksa", "nik_input", "updated_at"]
 
     try:
         dbsima = connect_dbsima()
@@ -1102,8 +1102,9 @@ def export_excel_v2_perangkat(background_task: BackgroundTasks, filter_regional:
         select a.id no_perangkat, b.kode_area, b.kode_fm, j.nama nama_fm, a.kode_bm, k.nama nama_bm, b.kode_witel, i.nama nama_witel, a.kode_lokasi, c.nama_lokasi,
         a.kode_gedung, b.nama_gedung, a.kode_room, a.kode_lantai, e.nama_lantai, a.kode_jenis, f.nama_jenis,
         a.kode_kategori, g.nama_kategori, a.kode_subkategori, h.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.kode_merk, l.nama_merk, a.satuan, a.jumlah,
-        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, m.nama nama_milik, a.keterangan, concat(a.prefix,'-',a.indeks) id_perangkat, 
-        case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, a.kondisi_terakhir, a.nik_user, a.tgl_input
+        a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, m.nama nama_milik, a.keterangan, concat(a.prefix,'-',a.indeks) id_perangkat,
+        a.id_perangkat id_perangkat_lama, case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, 
+        a.kondisi_terakhir, a.nik_user, a.tgl_input
         from dev_am_perangkat a
         inner join am_gedung b on a.kode_gedung=b.kode_gedung and b.kode_lokasi='11'
         inner join am_locations c on a.kode_lokasi=c.id
