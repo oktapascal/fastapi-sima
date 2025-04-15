@@ -1142,8 +1142,6 @@ def export_excel_v2_perangkat(background_task: BackgroundTasks, filter_regional:
 
         background_task.add_task(os.remove, file_name)
 
-        del dataframe
-
         return FileResponse(path=file_name, headers=headerResponse, filename=file_name)
     except Exception as ex:
         return {"status": False, "message": str(ex)}
