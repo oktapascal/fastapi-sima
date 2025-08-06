@@ -91,13 +91,13 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
         where = where + f"and a.tahun in ({tahun})"
 
     if kode_area is not None and kode_area != "" and kode_area != "null":
-        where = where + f"and e.kode_area in ({kode_area})"
+        where = where + f"and p.kode_area in ({kode_area})"
 
     if kode_fm is not None and kode_fm != "" and kode_fm != "null":
-        where = where + f"and a.kode_fm in ({kode_fm})"
+        where = where + f"and l.kode_fm in ({kode_fm})"
 
     if kode_bm is not None and kode_bm != "" and kode_bm != "null":
-        where = where + f"and a.kode_bm in ({kode_bm})"
+        where = where + f"and m.kode_bm in ({kode_bm})"
 
     if kode_ktg is not None and kode_ktg != "" and kode_ktg != "null":
         where = where + f"and a.kode_kategori in ({kode_ktg})"
@@ -113,13 +113,16 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
         cursor = dbsima.cursor()
 
         cursor.execute(f"""
-        select a.id no_perangkat, e.kode_area, a.kode_fm, l.nama nama_fm, a.kode_bm, m.nama nama_bm, a.kode_witel, k.nama nama_witel, a.kode_lokasi, d.nama_lokasi,
+        select a.id no_perangkat, p.kode_area, l.kode_fm, l.nama nama_fm, m.kode_bm, m.nama nama_bm, a.kode_witel, k.nama nama_witel, a.kode_lokasi, d.nama_lokasi,
         a.kode_gedung, e.nama_gedung, a.kode_room, a.kode_lantai, g.nama_lantai, a.kode_jenis, h.nama_jenis,
         a.kode_kategori, i.nama_kategori, a.kode_subkategori, j.nama_sub_kategori, a.nama_perangkat, a.is_ceklis, a.kode_merk, n.nama_merk, a.satuan, a.jumlah,
         a.kapasitas, a.no_seri, a.model, a.tahun, a.kondisi, a.kode_milik, o.nama nama_milik, a.keterangan, concat(a.prefix,'-',a.indeks) id_perangkat, 
         case when isnull(a.status_aktif, '1') = '1' then 'ACTIVE' else 'INACTIVE' end status_aktif, a.kondisi_terakhir, a.nik_user, a.tgl_input
         from dev_am_perangkat a
         inner join am_gedung as e ON e.kode_gedung = a.kode_gedung and e.kode_lokasi='11'
+        inner join am_bm m on e.kode_bm=m.kode_bm and e.kode_lokasi=m.kode_lokasi
+        inner join am_fm l on m.kode_fm=l.kode_fm and m.kode_lokasi=l.kode_lokasi
+        inner join am_area p on l.kode_area=p.kode_area and l.kode_lokasi=p.kode_lokasi
         inner join am_locations as d ON a.kode_lokasi = d.id
         inner join gsd_rooms as f ON a.kode_room = f.id
         inner join am_floors as g ON a.kode_lantai = g.id
@@ -127,8 +130,6 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
         left join am_perangkat_kategori as i ON a.kode_kategori = i.kategori_id
         left join am_perangkat_sub_kategori as j ON a.kode_subkategori = j.sub_kategori_id
         left join am_witel as k ON e.kode_witel = k.kode_witel
-        left join am_fm l on a.kode_fm=l.kode_fm
-        left join am_bm m on a.kode_bm=m.kode_bm
         left join am_perangkat_merk n on a.kode_merk=n.kode_merk
         left join am_milik o on a.kode_milik=o.kode_milik
         {where}
