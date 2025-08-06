@@ -107,6 +107,8 @@ def export_excel_perangkat(background_task: BackgroundTasks, kode_jenis: str | N
 
     if status_aktif is not None and status_aktif != "" and status_aktif != "null":
         where = where + f"and isnull(a.status_aktif, '1') in ({status_aktif})"
+    else:
+        where = where + f"and isnull(a.status_aktif, '1') in ('1')"
 
     try:
         dbsima = connect_dbsima()
